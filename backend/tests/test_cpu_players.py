@@ -83,16 +83,54 @@ def test_cpu_plays_a_move():
     virtual(main())
 
 
+def draw_times(t):
+    return [time for time, (_, deck, _), (_, prev, _) in _pairs(t.log) if deck < prev]
+
+
 def test_cpu_draws_at_its_pace_when_stuck():
     async def main():
         deck = "9D 4S KH 7C JD 2H 5S QC 8D 3H 6C TS"
-        t = Table("easy", {"h": "KS", "c": "2C"}, deck=deck, opened="h")
+        t = Table("easy", {"h": "KS", "c": "2C"}, deck=deck, opened="")
         await asyncio.sleep(60)
-        draws = [time for time, (_, deck, _), (_, prev, _) in _pairs(t.log) if deck < prev]
+        draws = draw_times(t)
         assert 4 <= len(draws) <= 8
         gaps = [b - a for a, b in zip(draws, draws[1:], strict=False)]
         assert min(gaps) >= 8.0  # Easy draws every 8-12 s at most
         assert sum(t.cpu.stats.errors.values()) == 0
+        await t.close()
+
+    virtual(main())
+
+
+def test_unopened_cpu_catches_up_once_a_human_has_opened():
+    async def main():
+        deck = " ".join(["9D 4S KH 7C JD 2H 5S QC 8D 3H 6C TS"] * 3)
+        t = Table("easy", {"h": "KS", "c": "2C"}, deck=deck, opened="")
+        await asyncio.sleep(30)
+        before = len(draw_times(t))
+        # The human opens: the CPU now draws three times as fast.
+        t.game.players["h"].opened = True
+        t.room.changed()
+        switched = t.loop.time()
+        await asyncio.sleep(30)
+        after = [time for time in draw_times(t) if time > switched]
+        assert len(after) >= 2.5 * before
+        gaps = [b - a for a, b in zip(after, after[1:], strict=False)]
+        assert min(gaps) >= 8.0 / 3 and max(gaps) <= 12.0 / 3 + 0.5
+        assert sum(t.cpu.stats.errors.values()) == 0
+        await t.close()
+
+    virtual(main())
+
+
+def test_opened_cpus_and_other_cpus_opening_dont_hurry():
+    async def main():
+        # Only a human opening counts; an opened CPU draws at its normal pace.
+        deck = "9D 4S KH 7C JD 2H 5S QC 8D 3H 6C TS"
+        t = Table("easy", {"h": "KS", "c": "2C 3C 4C 9H"}, deck=deck, opened="hc")
+        await asyncio.sleep(60)
+        gaps = [b - a for a, b in zip(draw_times(t), draw_times(t)[1:], strict=False)]
+        assert gaps and min(gaps) >= 8.0
         await t.close()
 
     virtual(main())

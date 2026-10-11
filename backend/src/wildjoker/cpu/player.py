@@ -44,6 +44,9 @@ RACE_FACTOR = 0.5
 # whole table before voting for a draw. If that finds a move, it plays it
 # after this many of its (slowest) reaction times: it took a while to spot.
 STUCK_REACTIONS = 3
+# A CPU that hasn't opened reacts and draws this many times faster once a
+# human has opened, so it doesn't leave the human playing alone for long.
+CATCH_UP_FACTOR = 3.0
 
 
 @dataclass
@@ -78,9 +81,11 @@ class CpuPlayer:
         self._wake = asyncio.Event()
         self._wake.set()  # look at the table as soon as the task starts
         self._deadline: float | None = None  # look again then, even without a change
-        self._next_draw = 0.0
+        self._last_draw: float | None = None
+        self._draw_gap = 0.0  # this draw's interval, before speed-ups
         self._staging = False
         self._racing = False
+        self._hurry = False  # not opened while a human has: catching up
         self._stuck_since: float | None = None
         self._first_seen: dict[tuple, float] = {}  # private moves held back
         self._cache: dict[tuple, Search] = {}
@@ -92,9 +97,12 @@ class CpuPlayer:
     async def run(self) -> None:
         try:
             while True:
-                await self._wait()
+                changed = await self._wait()
                 noticed = self._now()
-                await self._pause(self._reaction())
+                if changed:
+                    # Noticing a change takes the reaction time; a deadline
+                    # the CPU set itself (e.g. its next draw) doesn't.
+                    await self._pause(self._reaction())
                 try:
                     await self._look(noticed)
                 except GameError:
@@ -126,6 +134,9 @@ class CpuPlayer:
         race_below = self.level.smarts.race_below
         self._racing = bool(race_below and opponents and min(opponents) <= race_below)
 
+        self._hurry = not me["opened"] and any(
+            pl["cpu"] is None and pl["opened"] for pl in view["players"]
+        )
         if not me["opened"]:
             runs = openings(hand, self.level.smarts.open_longest)
             seen = [run for run in runs if not self._missed()]
@@ -285,15 +296,21 @@ class CpuPlayer:
         return needed <= set(self._hand())
 
     def _idle(self, deck: int, can_shed: bool, voted: bool) -> None:
-        """Nothing to play: draw at the level's pace, or vote for a draw."""
+        """Nothing to play: draw at the level's pace, or vote for a draw.
+
+        Catching up (see ``CATCH_UP_FACTOR``) also shortens the wait for a
+        draw that is already due.
+        """
         if deck:
             now = self._now()
-            if now >= self._next_draw:
+            gap = self._draw_gap / self.speed / (CATCH_UP_FACTOR if self._hurry else 1.0)
+            due = now if self._last_draw is None else self._last_draw + gap
+            if now >= due:
                 self._act(p.Draw(type="draw"), "draw", None)
-                interval = self.rng.uniform(*self.level.speed.draw_interval)
-                self._next_draw = now + interval / self.speed
+                self._last_draw = now
+                self._draw_gap = self.rng.uniform(*self.level.speed.draw_interval)
             else:
-                self._deadline = self._next_draw
+                self._deadline = due
         elif not can_shed and not voted:
             self._act(p.VoteDraw(type="vote_draw"), "vote_draw", None)
 
@@ -322,13 +339,18 @@ class CpuPlayer:
 
     # -- time --------------------------------------------------------------
 
-    async def _wait(self) -> None:
+    async def _wait(self) -> bool:
+        """Wait for a change or the CPU's own deadline; True if it was a change."""
+        changed = True
         if not self._wake.is_set():
             timeout = None if self._deadline is None else max(0.0, self._deadline - self._now())
-            with contextlib.suppress(TimeoutError):
+            try:
                 await asyncio.wait_for(self._wake.wait(), timeout)
+            except TimeoutError:
+                changed = False
         self._wake.clear()
         self._deadline = None
+        return changed
 
     def _look_again(self) -> None:
         """Look again after the reaction time even if nothing changes."""
@@ -336,6 +358,8 @@ class CpuPlayer:
 
     def _reaction(self) -> float:
         delay = self.rng.uniform(*self.level.speed.reaction) / self.speed
+        if self._hurry:
+            delay /= CATCH_UP_FACTOR
         return delay * RACE_FACTOR if self._racing else delay
 
     def _think_time(self, cards: int, piles: int) -> float:
