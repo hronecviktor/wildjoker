@@ -3,7 +3,9 @@ name = "wildjoker"
 version = "0.1.0"
 description = "Wild Joker: real-time multiplayer rummy server"
 requires-python = ">=3.13"
-dependencies = []
+dependencies = [
+    "highspy>=1.15.1",
+]
 
 [dependency-groups]
 dev = [

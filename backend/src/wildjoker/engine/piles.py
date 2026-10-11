@@ -108,3 +108,25 @@ def _as_set(cards: list[Card]) -> Arrangement | None:
     ordered = sorted(naturals, key=lambda c: c.suit) + jokers
     values = (rank,) * n if rank is not None else None
     return Arrangement("set", tuple(ordered), values)
+
+
+def find_opening(cards: Iterable[Card]) -> list[Card] | None:
+    """The longest joker-free run in ``cards``, or None if there is none."""
+    by_suit: dict[Suit, dict[int, Card]] = {}
+    for card in cards:
+        if not card.is_joker:
+            ranks = by_suit.setdefault(card.suit, {})
+            ranks[card.rank] = card
+            if card.rank == 1:
+                ranks[ACE_HIGH] = card
+    best: list[Card] = []
+    for ranks in by_suit.values():
+        run: list[Card] = []
+        for value in range(1, ACE_HIGH + 1):
+            if value in ranks and len(run) < MAX_RUN:
+                run.append(ranks[value])
+            else:
+                run = [ranks[value]] if value in ranks else []
+            if len(run) > len(best):
+                best = list(run)
+    return best if len(best) >= MIN_PILE else None
