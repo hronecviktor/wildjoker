@@ -1,5 +1,6 @@
 from .levels import EASY, EXPERT, HARD, LEVELS, MEDIUM, Level, Moves, Smarts, Speed
 from .moves import Move, find_moves
+from .player import CpuPlayer, CpuPlayers
 
 __all__ = [
     "EASY",
@@ -7,6 +8,8 @@ __all__ = [
     "HARD",
     "LEVELS",
     "MEDIUM",
+    "CpuPlayer",
+    "CpuPlayers",
     "Level",
     "Move",
     "Moves",
