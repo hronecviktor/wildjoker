@@ -11,5 +11,5 @@ if [ ! -d "$PW_CACHE/playwright" ]; then
   docker run --rm -u "$(id -u):$(id -g)" -v "$PW_CACHE:/pw" "$IMAGE" \
     pip install --quiet --target /pw playwright==1.58.0
 fi
-exec docker run --rm --network host -e PYTHONPATH=/pw:/t -v "$PW_CACHE:/pw:ro" -v "$PWD:/t:ro" \
+exec docker run --rm --memory 1.5g --network host -e PYTHONPATH=/pw:/t -v "$PW_CACHE:/pw:ro" -v "$PWD:/t:ro" \
   "$IMAGE" python3 /t/browser_test.py "$@"
