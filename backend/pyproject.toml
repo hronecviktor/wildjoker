@@ -5,11 +5,16 @@ description = "Wild Joker: real-time multiplayer rummy server"
 requires-python = ">=3.13"
 dependencies = [
     "highspy>=1.15.1",
+    "pydantic>=2.14.0",
+    "starlette>=1.7.0",
+    "uvicorn[standard]>=0.54.0",
 ]
 
 [dependency-groups]
 dev = [
+    "httpx2>=2.13.1",
     "pytest>=8",
+    "pytest-timeout>=2.4.0",
     "ruff>=0.6",
 ]
 
