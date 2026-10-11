@@ -213,8 +213,9 @@ Change these lines (marked `CHANGE` in the file):
   `ip -4 addr` (addresses on the network interfaces) with
   `curl -4 ifconfig.me` (the public address). If the public address is
   among the interface addresses (most VPS, e.g. Hetzner), leave the line
-  commented out. If it isn't (e.g. AWS, GCP), uncomment it as
-  `external-ip=<public IP>/<private interface IP>`.
+  commented out. If it isn't (e.g. Oracle Cloud, AWS, GCP), uncomment it as
+  `external-ip=<public IP>/<private interface IP>`, e.g.
+  `external-ip=130.61.131.91/10.0.0.218`.
 
 The rest of the file:
 
@@ -246,6 +247,38 @@ ufw status
 
 If your hosting provider has its own firewall (a cloud "security group"),
 open the same ports there too.
+
+**Oracle Cloud** has two firewalls, and both need the ports:
+
+1. **The VCN's security list** (Console → Networking → Virtual cloud
+   networks → your VCN → Security Lists → Default → Add Ingress Rules), with
+   source CIDR `0.0.0.0/0`:
+   - UDP, destination port `3478`
+   - TCP, destination port `3478`
+   - TCP, destination port `5349`
+   - UDP, destination port `5349`
+   - UDP, destination port range `49152-49451`
+2. **iptables on the server.** Oracle's Ubuntu images don't use `ufw`
+   (`ufw status` says `inactive`); they ship iptables rules that reject
+   everything not explicitly allowed. Insert the ports before that reject
+   rule and save them so they survive a reboot:
+
+   ```bash
+   sudo iptables -L INPUT --line-numbers     # find the "REJECT ... reject-with icmp-host-prohibited" line
+   N=$(sudo iptables -L INPUT --line-numbers | awk '/REJECT/ {print $1; exit}')
+   sudo iptables -I INPUT $N -p udp --dport 3478 -j ACCEPT
+   sudo iptables -I INPUT $N -p tcp --dport 3478 -j ACCEPT
+   sudo iptables -I INPUT $N -p tcp --dport 5349 -j ACCEPT
+   sudo iptables -I INPUT $N -p udp --dport 5349 -j ACCEPT
+   sudo iptables -I INPUT $N -p udp --dport 49152:49451 -j ACCEPT
+   sudo netfilter-persistent save
+   ```
+
+   Ports 80 and 443 for Caddy were opened the same way for bbl3d, so
+   `sudo iptables -L INPUT` shows them there already.
+
+Oracle instances are behind NAT (the public IP isn't on any interface), so
+coturn needs `external-ip=<public IP>/<private IP>` (step 5.3).
 
 ### 5.5 Start
 
