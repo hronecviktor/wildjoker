@@ -65,11 +65,8 @@
       borrowed={borrowed.has(card)}
       fresh={fresh.has(card)}
       onclick={() => ontoggle(card)}
-      style="position:absolute;left:{layout.offset + col * layout.step}px;top:{TOP + row * ROW_STEP}px;z-index:{fresh.has(
-        card,
-      )
-        ? 40
-        : i + 1}"
+      style="position:absolute;left:{layout.offset + col * layout.step}px;top:{TOP + row * ROW_STEP}px;z-index:{i +
+        1}"
     />
   {:else}
     <p class="empty">{t("hand.empty")}</p>

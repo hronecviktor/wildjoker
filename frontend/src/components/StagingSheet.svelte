@@ -18,6 +18,8 @@
   const remaining = $derived(game.deadline === null ? null : Math.max(0, (game.deadline - now) / 1000));
   const timeout = $derived(game.game?.staging_timeout ?? 15);
   const hasSelection = $derived(game.selected.length > 0);
+  // Cards the player is adding from their own hand (the rest were on the table).
+  const fromHand = $derived(new Set(game.game?.hand ?? []));
 </script>
 
 <section class="sheet" aria-label={t("staging.title")} data-testid="staging">
@@ -73,6 +75,7 @@
               nav="staging"
               selected={game.selected.includes(c.id)}
               borrowed={false}
+              added={fromHand.has(c.id)}
               onclick={() => game.toggle(c.id)}
             />
           {/each}

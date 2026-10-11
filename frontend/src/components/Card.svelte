@@ -14,6 +14,8 @@
     borrowed?: boolean;
     /** A card just drawn: flashes so it's easy to spot in the hand. */
     fresh?: boolean;
+    /** In the move sheet: a card the player is adding from their hand. */
+    added?: boolean;
     onclick?: (e: MouseEvent) => void;
     nav?: string;
     style?: string;
@@ -25,6 +27,7 @@
     value = null,
     borrowed = false,
     fresh = false,
+    added = false,
     onclick,
     nav,
     style,
@@ -62,6 +65,7 @@
     class:selected
     class:borrowed
     class:fresh
+    class:added
     data-suit={suit ?? "j"}
     data-nav={nav}
     data-card={id}
@@ -205,8 +209,9 @@
       0 6px 10px rgb(0 0 0 / 0.35);
   }
   /* A card just drawn: a green glow that pulses, then fades (3 s, see FRESH_MS). */
+  /* A fresh card keeps its place in the stack: lifted, it shows more of
+     itself without covering the corner of the card overlapping it. */
   .fresh {
-    z-index: 3;
     border-color: #2fe07a;
     animation: fresh 3s ease-out forwards;
   }
@@ -217,7 +222,7 @@
     0%,
     30%,
     60% {
-      transform: translateY(-14px) scale(1.08);
+      transform: translateY(-14px);
       box-shadow:
         0 0 0 4px #2fe07a,
         0 0 22px 6px rgb(47 224 122 / 0.85);
@@ -225,7 +230,7 @@
     15%,
     45%,
     75% {
-      transform: translateY(-6px) scale(1);
+      transform: translateY(-6px);
       box-shadow:
         0 0 0 3px #2fe07a,
         0 0 8px 2px rgb(47 224 122 / 0.5);
@@ -254,6 +259,19 @@
     line-height: 20px;
     text-align: center;
     font-weight: 800;
+  }
+  /* Added from the player's hand into a move: their colour. */
+  .added {
+    border-color: #2f6fe0;
+    background: linear-gradient(160deg, #eef4ff 60%, #d9e6ff);
+    box-shadow:
+      0 0 0 2px #2f6fe0,
+      0 1px 2px rgb(0 0 0 / 0.35);
+  }
+  .added.selected {
+    box-shadow:
+      0 0 0 3px #f5b301,
+      0 6px 10px rgb(0 0 0 / 0.35);
   }
   .borrowed::after {
     content: "";
