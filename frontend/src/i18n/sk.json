@@ -67,7 +67,12 @@
   "voice.muted": "stlmený",
   "voice.in_voice": "v hlasovom chate",
   "voice.speaking": "hovorí",
-  "voice.failed": "Do hlasového chatu sa nepodarilo pripojiť: {reason}",
+  "voice.error.permission_denied": "Prístup k mikrofónu bol zamietnutý. Povoľte ho v nastaveniach stránky v prehliadači a skúste znova.",
+  "voice.error.no_device": "Nenašiel sa žiadny mikrofón.",
+  "voice.error.device_busy": "Mikrofón používa iná aplikácia.",
+  "voice.error.insecure_context": "Hlasový chat vyžaduje zabezpečené (https) pripojenie.",
+  "voice.error.unsupported": "Tento prehliadač nepodporuje hlasový chat.",
+  "voice.error.failed": "Nepodarilo sa pripojiť k hlasovému chatu. Skúste znova.",
 
   "game.deck_one": "V balíčku zostáva {n} karta",
   "game.deck_few": "V balíčku zostávajú {n} karty",

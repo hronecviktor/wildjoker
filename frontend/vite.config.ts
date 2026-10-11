@@ -10,7 +10,7 @@ export default defineConfig({
   server: {
     port: 5181,
     strictPort: true,
-    proxy: { "/ws": { target: backend, ws: true } },
+    proxy: { "/ws": { target: backend, ws: true }, "/ice": backend },
   },
   test: {
     include: ["src/**/*.test.ts"],

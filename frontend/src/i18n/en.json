@@ -67,7 +67,12 @@
   "voice.muted": "muted",
   "voice.in_voice": "in voice",
   "voice.speaking": "speaking",
-  "voice.failed": "Couldn't join voice: {reason}",
+  "voice.error.permission_denied": "Microphone access was refused. Allow it in the browser's site settings and try again.",
+  "voice.error.no_device": "No microphone was found.",
+  "voice.error.device_busy": "The microphone is in use by another app.",
+  "voice.error.insecure_context": "Voice chat needs a secure (https) connection.",
+  "voice.error.unsupported": "This browser doesn't support voice chat.",
+  "voice.error.failed": "Couldn't join voice chat. Try again.",
 
   "game.deck_one": "{n} card left in the deck",
   "game.deck_few": "{n} cards left in the deck",

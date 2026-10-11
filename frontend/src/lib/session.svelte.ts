@@ -5,7 +5,7 @@ import { errorText, t } from "../i18n/index.svelte";
 import { Connection, ServerError } from "./connection.svelte";
 import { load, save } from "./storage";
 import { toast } from "./toasts.svelte";
-import { createVoice } from "./voice";
+import { createVoice, VoiceError } from "./voice";
 
 export const conn = new Connection();
 export const voice = createVoice(conn.send);
@@ -15,13 +15,7 @@ export const voicePrefs = $state({ wanted: false, muted: load("muted", false) })
 
 conn.onSignal = (s) => voice.handleSignal(s.from, s.data);
 
-conn.onDropped = () => {
-  if (voicePrefs.wanted) voice.leave();
-};
-
-conn.onJoined = () => {
-  if (voicePrefs.wanted) void joinVoice();
-};
+// The voice module rejoins by itself after the game socket reconnects.
 
 conn.onEvent = (e) => {
   const name = (id?: string) => conn.state?.players.find((p) => p.id === id)?.name ?? "?";
@@ -54,7 +48,8 @@ export async function joinVoice(): Promise<void> {
     if (voicePrefs.muted) voice.setMuted(true);
   } catch (e) {
     voicePrefs.wanted = false;
-    toast(t("voice.failed", { reason: e instanceof Error ? e.message : String(e) }), "error");
+    const code = e instanceof VoiceError ? e.code : "failed";
+    toast(t(`voice.error.${code}`), "error", 6000);
   }
 }
 
