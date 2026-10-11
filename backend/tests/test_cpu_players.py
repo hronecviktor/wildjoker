@@ -331,3 +331,26 @@ def test_expert_beats_easy():
         wins += sum(result.levels[w] == "expert" for w in winners) / len(winners)
     print(f"expert won {wins / games:.0%} against easy")
     assert wins / games >= 0.8
+
+
+def test_fast_forward_speeds_cpus_up():
+    async def main():
+        deck = " ".join(["9D 4S KH 7C JD 2H 5S QC 8D 3H 6C TS"] * 3)
+        t = Table("easy", {"h": "", "c": "2C"}, deck=deck, opened="")
+        t.game.places = [["h"]]  # the human is out; only the CPU plays
+        t.room.changed()
+        await asyncio.sleep(20)
+        slow = len(draw_times(t))
+        cpu = t.cpu  # the game may end (and the CPU stop) once it opens
+        t.room.fast_forward = True
+        t.room.changed()
+        switched = t.loop.time()
+        await asyncio.sleep(20)
+        fast = [time for time in draw_times(t) if time > switched]
+        assert slow <= 3 and len(fast) >= 25
+        gaps = [b - a for a, b in zip(fast, fast[1:], strict=False)]
+        assert max(gaps) <= 12.0 / 20 + 0.1
+        assert sum(cpu.stats.errors.values()) == 0
+        await t.close()
+
+    virtual(main())

@@ -63,6 +63,7 @@ connection after replying.
 | `{"type": "cancel"}` | | Put staged piles back unchanged. |
 | `{"type": "commit", "piles": [[ids], ...]}` | `piles`: new pile ids | The final piles. May use any card from your staged piles and your hand. Staged cards you leave out go to your hand. Works without staging to put new piles down from your hand. An empty list with staged piles takes them all into your hand. |
 | `{"type": "vote_draw"}` | | Once the deck is empty: agree to end as a draw. Votes reset when anyone commits. |
+| `{"type": "fast_forward", "on": true}` | | Humans only, once everyone still holding cards is a CPU: CPUs play 20× faster (`on: false` back to normal). Switches itself off when a human plays again or the game ends. Error `humans_playing` otherwise. |
 
 The client builds the move locally (the server never sees a half-finished
 staging area) and should only commit piles it has validated with the shared
@@ -129,6 +130,7 @@ Sent as `{"type": "state", ...}` after every change, tailored to each player:
   "host": "<player id or null>",
   "you": "<your player id>",
   "options": {"decks": 2, "hand_size": 5},
+  "fast_forward": false,
   "players": [
     {
       "id": "1a2b3c4d", "name": "Viktor", "cpu": null,
@@ -168,4 +170,4 @@ Sent as `{"type": "state", ...}` after every change, tailored to each player:
 `unknown_player`, `deck_empty`, `deck_not_empty`, `already_opened`,
 `invalid_opening`, `not_opened`, `bad_card`, `bad_pile`, `pile_locked`,
 `not_staging`, `staging_expired`, `empty_move`, `invalid_pile`,
-`not_in_voice`.
+`not_in_voice`, `humans_playing`.

@@ -25,6 +25,7 @@ from typing import TYPE_CHECKING, Any
 
 from ..engine import Card, GameError
 from ..server import protocol as p
+from ..server.rooms import FAST_FORWARD
 from .levels import EXPERT, LEVELS, Level, Moves
 from .moves import Move, Search, find_moves, openings
 
@@ -44,6 +45,8 @@ RACE_FACTOR = 0.5
 # whole table before voting for a draw. If that finds a move, it plays it
 # after this many of its (slowest) reaction times: it took a while to spot.
 STUCK_REACTIONS = 3
+# Longest single sleep inside a pause, so a speed change applies quickly.
+PAUSE_SLICE = 0.5
 # A CPU that hasn't opened reacts and draws this many times faster once a
 # human has opened, so it doesn't leave the human playing alone for long.
 CATCH_UP_FACTOR = 3.0
@@ -75,7 +78,7 @@ class CpuPlayer:
         self.room, self.pid, self.level = room, pid, level
         self.game = room.game
         self.rng = rng or random.Random()
-        self.speed = speed
+        self._speed = speed
         self.run_blocking = run_blocking or self._in_executor
         self.stats = Stats()
         self._wake = asyncio.Event()
@@ -89,6 +92,11 @@ class CpuPlayer:
         self._stuck_since: float | None = None
         self._first_seen: dict[tuple, float] = {}  # private moves held back
         self._cache: dict[tuple, Search] = {}
+
+    @property
+    def speed(self) -> float:
+        """This CPU's speed, including the room's fast-forward."""
+        return self._speed * (FAST_FORWARD if self.room.fast_forward else 1.0)
 
     def notify(self) -> None:
         """The room changed."""
@@ -374,9 +382,14 @@ class CpuPlayer:
     def _now(self) -> float:
         return self.room.settings.clock()
 
-    @staticmethod
-    async def _pause(seconds: float) -> None:
-        await asyncio.sleep(seconds)
+    async def _pause(self, seconds: float) -> None:
+        """Sleep ``seconds`` at the current speed, in slices, so that switching
+        fast-forward on or off takes effect during a long pause."""
+        work = seconds * self.speed  # the pause at speed 1
+        while work > 1e-9:
+            step = min(work / self.speed, PAUSE_SLICE)
+            await asyncio.sleep(step)
+            work -= step * self.speed
 
     def _hand(self) -> list[int]:
         game = self.room.game

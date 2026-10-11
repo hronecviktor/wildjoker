@@ -5,7 +5,7 @@
   import { t, tn } from "../i18n/index.svelte";
   import { GameController } from "../lib/game.svelte";
   import { focusGroup, navigate } from "../lib/keynav";
-  import { conn, leaveRoom, toggleMute } from "../lib/session.svelte";
+  import { act, conn, leaveRoom, toggleMute } from "../lib/session.svelte";
   import { toast } from "../lib/toasts.svelte";
   import Hand from "./Hand.svelte";
   import LangPicker from "./LangPicker.svelte";
@@ -33,6 +33,16 @@
   const deckEmpty = $derived(view.deck === 0);
   const voted = $derived(view.draw_votes.includes(room.you));
   const hasSelection = $derived(game.selected.length > 0);
+  // Everyone still holding cards is a CPU: a human may speed them up.
+  const canFastForward = $derived.by(() => {
+    if (room.phase !== "playing" || !game.me || game.me.cpu !== null) return false;
+    const playing = room.players.filter((p) => p.cards !== undefined && p.place == null);
+    return playing.length > 0 && playing.every((p) => p.cpu !== null);
+  });
+
+  function toggleFastForward() {
+    void act(() => conn.request({ type: "fast_forward", on: !room.fast_forward }));
+  }
 
   function takeFocused(): boolean {
     const el = document.activeElement as HTMLElement | null;
@@ -91,6 +101,9 @@
         break;
       case "m":
         toggleMute();
+        break;
+      case "f":
+        if (canFastForward) toggleFastForward();
         break;
       case "?":
         help = true;
@@ -233,6 +246,21 @@
   {:else}
     <p class="banner">{t("game.spectating")}</p>
   {/if}
+  {#if canFastForward}
+    <div class="ff-bar">
+      <span class="ff-hint">{t("game.only_cpus_left")}</span>
+      <button
+        type="button"
+        class="btn"
+        class:primary={!room.fast_forward}
+        aria-pressed={room.fast_forward}
+        aria-keyshortcuts="F"
+        data-testid="fast-forward"
+        onclick={toggleFastForward}
+        >{room.fast_forward ? "▶ " + t("game.normal_speed") : "⏩ " + t("game.fast_forward")}</button
+      >
+    </div>
+  {/if}
 </div>
 
 {#if help}<ShortcutHelp onclose={() => (help = false)} />{/if}
@@ -334,6 +362,18 @@
     margin: 4px 12px 0;
     color: var(--muted);
     font-size: 13px;
+  }
+  .ff-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 8px 12px;
+    margin: 0 12px 12px;
+  }
+  .ff-hint {
+    color: var(--muted);
+    font-size: 14px;
   }
   .banner {
     margin: 12px;

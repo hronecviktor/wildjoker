@@ -19,6 +19,7 @@
     ["T", "keys.table"],
     ["R", "keys.sort"],
     ["M", "keys.mute"],
+    ["F", "keys.fast_forward"],
     ["?", "keys.help"],
   ];
 </script>

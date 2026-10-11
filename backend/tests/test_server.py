@@ -428,3 +428,58 @@ def test_voice_signalling(connect):
     host.wait(lambda c: c.player(other.you)["muted"])
     other.ok("voice_leave")
     host.wait(lambda c: not c.player(other.you)["voice"])
+
+
+# -- fast forward ------------------------------------------------------------------
+
+
+def only_cpus_left(http, host):
+    """Host has gone out; one CPU and one human-less seat play on."""
+    room = room_of(http, host)
+    cpu = next(s.id for s in room.seats.values() if s.cpu)
+
+    def install():
+        room.game = make_game({host.you: "", cpu: "9C 2D"}, deck="KD QS JH", opened=[cpu])
+        room.game.places = [[host.you]]
+        room.changed()
+
+    run(http, install)
+    host.wait(lambda c: c.player(host.you)["place"] == 1)
+    return room
+
+
+def test_fast_forward_only_when_only_cpus_are_left(http, connect):
+    host = connect()
+    host.ok("create", name="Host")
+    host.ok("add_cpu", level="easy")
+    host.ok("start")
+    host.wait(lambda c: c.state["phase"] == "playing")
+    assert host.error("fast_forward", on=True) == "humans_playing"
+    assert host.state["fast_forward"] is False
+    room = only_cpus_left(http, host)
+    host.ok("fast_forward", on=True)
+    host.wait(lambda c: c.state["fast_forward"])
+    assert room.fast_forward
+    host.ok("fast_forward", on=False)
+    host.wait(lambda c: not c.state["fast_forward"])
+
+
+def test_fast_forward_switches_off_when_a_human_is_back(http, connect):
+    host, other = started(connect)
+    room = room_of(http, host)
+    token, code = other.token, other.code
+    other.ok("leave")  # a CPU takes over other's seat
+    host.wait(lambda c: c.player(other.you)["cpu"] == "medium")
+    assert host.error("fast_forward", on=True) == "humans_playing"  # host still plays
+
+    def host_out():
+        room.game.players[host.you].hand = []
+        room.game.places = [[host.you]]
+        room.changed()
+
+    run(http, host_out)
+    host.ok("fast_forward", on=True)
+    host.wait(lambda c: c.state["fast_forward"])
+    back = connect()
+    back.ok("resume", code=code, token=token)  # a human is playing again
+    host.wait(lambda c: not c.state["fast_forward"])

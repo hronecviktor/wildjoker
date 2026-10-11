@@ -26,6 +26,8 @@ from . import protocol as p
 log = logging.getLogger(__name__)
 
 CODE_LETTERS = "ABCDEFGHJKLMNPQRSTUVWXYZ"  # no I or O
+# How much faster CPUs play while a room is fast-forwarded.
+FAST_FORWARD = 20.0
 CPU_NAMES = ["Ada", "Boris", "Cyril", "Dora", "Emil", "Fiona", "Gustav", "Hana"]
 
 
@@ -76,6 +78,8 @@ class Room:
     phase: Literal["lobby", "playing", "finished"] = "lobby"
     game: Game | None = None
     version: int = 0
+    # Only CPUs are still playing and a human asked to speed them up.
+    fast_forward: bool = False
     last_activity: float = 0.0
     closed: bool = False
     # Called after every change and on close; CPU players hook in here.
@@ -154,6 +158,13 @@ class Room:
             case p.Start():
                 self._host_in_lobby(pid)
                 self._start()
+            case p.FastForward(on=on):
+                if seat.cpu is not None:
+                    raise GameError("bad_player")
+                if on and not self.only_cpus_left:
+                    raise GameError("humans_playing")
+                self.fast_forward = on
+                self.changed()
             case p.BackToLobby():
                 if pid != self.host:
                     raise GameError("not_host")
@@ -245,6 +256,7 @@ class Room:
             "host": self.host,
             "you": pid,
             "options": {"decks": self.decks, "hand_size": self.hand_size},
+            "fast_forward": self.fast_forward,
             "players": players,
             "game": None,
         }
@@ -276,7 +288,17 @@ class Room:
 
     # -- change notification and timers ------------------------------------
 
+    @property
+    def only_cpus_left(self) -> bool:
+        """A game is running and everyone still holding cards is a CPU."""
+        if self.phase != "playing" or self.game is None:
+            return False
+        active = self.game.active
+        return bool(active) and all(self.seats[pid].cpu is not None for pid in active)
+
     def changed(self) -> None:
+        if self.fast_forward and not self.only_cpus_left:
+            self.fast_forward = False  # a human took a seat back, or the game ended
         self.version += 1
         self.last_activity = self.settings.clock()
         for seat in self.seats.values():
@@ -319,7 +341,8 @@ class Room:
             delay = first + game.config.staging_timeout - self.settings.clock()
             self._expiry = loop.call_later(max(0.0, delay) + 0.01, self.expire_staging)
         if not game.deck:
-            self._stalemate = loop.call_later(self.settings.stalemate_idle, self._check_stalemate)
+            idle = self.settings.stalemate_idle / (FAST_FORWARD if self.fast_forward else 1.0)
+            self._stalemate = loop.call_later(idle, self._check_stalemate)
 
     def expire_staging(self) -> None:
         if self.game is None or self.phase != "playing":

@@ -75,6 +75,9 @@
   "voice.error.unsupported": "This browser doesn't support voice chat.",
   "voice.error.failed": "Couldn't join voice chat. Try again.",
   "game.deck_one": "{n} card left in the deck",
+  "game.normal_speed": "Normal speed",
+  "game.fast_forward": "Fast forward",
+  "game.only_cpus_left": "Only CPUs are still playing.",
   "game.deck_few": "{n} cards left in the deck",
   "game.deck_other": "{n} cards left in the deck",
   "game.actions": "Actions",
@@ -127,6 +130,7 @@
   "finished.waiting_for_host": "Waiting for the host…",
 
   "keys.title": "Keyboard shortcuts",
+  "keys.fast_forward": "Fast forward when only CPUs are left",
   "keys.arrows": "Move between cards, piles and buttons",
   "keys.enter": "Select a card, take a pile, press a button",
   "keys.esc": "Clear the selection, then cancel your move",
@@ -189,6 +193,7 @@
   "event.kicked": "The host removed you from the game.",
 
   "error.unknown": "Something went wrong ({code}).",
+  "error.humans_playing": "Fast forward works once only CPUs are still playing.",
   "error.disconnected": "Lost the connection to the server.",
   "error.bad_message": "The server didn't understand that.",
   "error.too_large": "That message was too large.",

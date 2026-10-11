@@ -120,6 +120,11 @@ class VoteDraw(Message):
     type: Literal["vote_draw"]
 
 
+class FastForward(Message):
+    type: Literal["fast_forward"]
+    on: bool
+
+
 # -- voice -------------------------------------------------------------------
 
 
@@ -163,6 +168,7 @@ ClientMessage = Annotated[
     | Cancel
     | Commit
     | VoteDraw
+    | FastForward
     | VoiceJoin
     | VoiceLeave
     | VoiceMute

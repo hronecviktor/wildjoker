@@ -75,6 +75,9 @@
   "voice.error.unsupported": "Tento prehliadač hlasový chat nepodporuje.",
   "voice.error.failed": "Do hlasového chatu sa nepodarilo pripojiť. Skús to znova.",
   "game.deck_one": "V balíčku zostáva {n} karta",
+  "game.normal_speed": "Normálna rýchlosť",
+  "game.fast_forward": "Zrýchliť",
+  "game.only_cpus_left": "Hrajú už len počítače.",
   "game.deck_few": "V balíčku zostávajú {n} karty",
   "game.deck_other": "V balíčku zostáva {n} kariet",
   "game.actions": "Akcie",
@@ -127,6 +130,7 @@
   "finished.waiting_for_host": "Čaká sa na hostiteľa…",
 
   "keys.title": "Klávesové skratky",
+  "keys.fast_forward": "Zrýchliť, keď hrajú už len počítače",
   "keys.arrows": "Presun medzi kartami, kôpkami a tlačidlami",
   "keys.enter": "Označiť kartu, zobrať kôpku, stlačiť tlačidlo",
   "keys.esc": "Zrušiť označenie, potom zrušiť ťah",
@@ -189,6 +193,7 @@
   "event.kicked": "Hostiteľ ťa z hry odobral.",
 
   "error.unknown": "Niečo sa pokazilo ({code}).",
+  "error.humans_playing": "Zrýchliť sa dá, až keď hrajú už len počítače.",
   "error.disconnected": "Spojenie so serverom sa prerušilo.",
   "error.bad_message": "Server tejto správe nerozumel.",
   "error.too_large": "Správa bola príliš veľká.",
