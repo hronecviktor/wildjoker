@@ -216,6 +216,11 @@ Change these lines (marked `CHANGE` in the file):
   commented out. If it isn't (e.g. Oracle Cloud, AWS, GCP), uncomment it as
   `external-ip=<public IP>/<private interface IP>`, e.g.
   `external-ip=130.61.131.91/10.0.0.218`.
+- `listening-ip=` and `relay-ip=`: the server's main address from
+  `ip -4 addr` (behind NAT, the private one: `10.0.0.218` on the Oracle
+  VPS). Set them whenever the server has other interfaces, such as
+  Tailscale or Docker bridges, or coturn will also relay on those, and
+  voice fails for players whose relay lands there.
 
 The rest of the file:
 
@@ -285,7 +290,7 @@ coturn needs `external-ip=<public IP>/<private IP>` (step 5.3).
 ```bash
 systemctl enable --now coturn
 systemctl status coturn          # active (running)
-journalctl -u coturn -n 50       # no "ERROR" lines about the config or certificate
+journalctl -u coturn -n 50       # no "ERROR" lines; no "cannot start TLS" warning; only your address as listener and relay
 ss -lnptu | grep turnserver      # listening on 3478 and 5349
 ```
 
