@@ -76,8 +76,38 @@ pile rules (`shared/piles.json`). The server checks everything again.
 | `{"type": "voice_mute", "muted": true}` | `players[].muted`. |
 | `{"type": "signal", "to": "<id>", "data": {...}}` | Relayed as `{"type": "signal", "from": "<id>", "data": {...}}`. Both players must be in voice. `data` is opaque (SDP offer/answer, ICE candidates). |
 
-Convention: a player who joins voice sends offers to everyone already in
-voice; the others answer.
+Connections are set up with WebRTC "perfect negotiation" (see
+`frontend/src/lib/voice/`): whenever two players are both in voice, both
+sides create a connection. The player with the larger id sends the first
+offer (the other one only offers itself if none comes within 3 s); later
+offers may come from either side, and on a collision the player with the
+smaller id is *polite* and rolls its own offer back. The `data` the
+voice module sends is `{"sid": "<session id>", "description": {...}}` or
+`{"sid": "...", "candidate": {...}}`; `sid` is new each time a player joins
+voice, so a peer that rejoined is recognised and gets a fresh connection.
+
+### ICE servers (HTTP)
+
+`GET /ice?player=<your player id>` returns the STUN/TURN servers for
+`RTCPeerConnection`, with short-lived TURN credentials (coturn's
+`use-auth-secret` scheme: username `<expiry>:<player id>`, password
+`base64(HMAC-SHA1(secret, username))`):
+
+```json
+{
+  "ice_servers": [
+    {"urls": ["stun:stun.l.google.com:19302"]},
+    {"urls": ["turn:wildjoker.0s.is:3478?transport=udp", "..."],
+     "username": "1760000000:1a2b3c4d", "credential": "..."}
+  ],
+  "ttl": 43200
+}
+```
+
+`403` unless the player id belongs to a seat with an open connection. The
+TURN entry is only present when the server has `WILDJOKER_TURN_URLS` and
+`WILDJOKER_TURN_SECRET` set (see `deploy/README.md`); `ttl` is in seconds,
+the client fetches new credentials before they expire.
 
 ## Other
 

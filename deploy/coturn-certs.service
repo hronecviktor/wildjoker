@@ -1,0 +1,6 @@
+[Unit]
+Description=Copy Caddy's certificate to coturn
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/coturn-certs.sh

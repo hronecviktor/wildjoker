@@ -6,6 +6,8 @@ where everyone plays at once and the table can be rearranged freely.
 - [RULES.md](RULES.md): the rules
 - [DESIGN.md](DESIGN.md): architecture and plans
 - [shared/protocol.md](shared/protocol.md): client–server messages
+- [deploy/README.md](deploy/README.md): running it at wildjoker.0s.is, with
+  coturn for voice chat
 
 ## Backend
 

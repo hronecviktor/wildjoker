@@ -13,13 +13,14 @@ from typing import Any
 
 from pydantic import ValidationError
 from starlette.applications import Starlette
-from starlette.responses import FileResponse, PlainTextResponse, Response
+from starlette.responses import FileResponse, JSONResponse, PlainTextResponse, Response
 from starlette.routing import Mount, Route, WebSocketRoute
 from starlette.staticfiles import StaticFiles
 from starlette.websockets import WebSocket, WebSocketDisconnect, WebSocketDisconnected
 
 from ..engine import GameError
 from . import protocol as p
+from .ice import IceConfig
 from .rooms import Room, RoomManager, Seat, Settings
 
 log = logging.getLogger(__name__)
@@ -130,10 +131,27 @@ async def health(request) -> Response:
     return PlainTextResponse("ok")
 
 
+async def ice_servers(request) -> Response:
+    """STUN/TURN servers for voice chat, for a player who is connected to a room.
+
+    Asking for the player id keeps the TURN relay from being open to anyone
+    on the internet: ids are random and only shared within a room.
+    """
+    manager: RoomManager = request.app.state.manager
+    pid = request.query_params.get("player", "")
+    if not any(
+        (seat := room.seats.get(pid)) and seat.conn is not None for room in manager.rooms.values()
+    ):
+        return JSONResponse({"error": "not_joined"}, status_code=403)
+    config: IceConfig = request.app.state.ice
+    return JSONResponse(config.servers(pid), headers={"Cache-Control": "no-store"})
+
+
 def create_app(
     settings: Settings | None = None,
     static_dir: Path | None = None,
     process_pool: bool = True,
+    ice: IceConfig | None = None,
 ) -> Starlette:
     settings = settings or Settings()
     static_dir = static_dir or Path(os.environ.get("WILDJOKER_STATIC", DEFAULT_STATIC))
@@ -146,6 +164,7 @@ def create_app(
 
     routes = [
         Route("/healthz", health),
+        Route("/ice", ice_servers),
         WebSocketRoute("/ws", game_socket),
         Route("/", index),
         Route("/j/{code}", index),  # invite links open the app
@@ -175,4 +194,5 @@ def create_app(
 
     app = Starlette(routes=routes, lifespan=lifespan)
     app.state.manager = RoomManager(settings)
+    app.state.ice = ice or IceConfig.from_env()
     return app

@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Voice harness</title>
+    <style>
+      body { font: 16px system-ui, sans-serif; margin: 16px; }
+      button { font: inherit; margin: 4px 4px 4px 0; }
+      li.speaking { font-weight: bold; color: #070; }
+      #error { color: #b00; }
+    </style>
+  </head>
+  <body>
+    <h1>Wild Joker voice harness</h1>
+    <p>
+      <input id="name" placeholder="Name" value="Tester" />
+      <button id="create">Create room</button>
+      <input id="code" placeholder="Code" size="5" />
+      <button id="join-room">Join room</button>
+    </p>
+    <p>
+      Room <b id="room">–</b>
+      <button id="join">Join voice</button>
+      <button id="leave">Leave voice</button>
+      <button id="mute">Mute</button>
+      <span id="blocked" hidden>Click anywhere to hear the others</span>
+    </p>
+    <p id="error"></p>
+    <ul id="players"></ul>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
