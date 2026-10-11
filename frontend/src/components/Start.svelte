@@ -148,6 +148,9 @@
   .join-row .field {
     flex: 1;
   }
+  .join-row .btn {
+    white-space: nowrap;
+  }
   .invite {
     margin: 0;
     font-size: 18px;

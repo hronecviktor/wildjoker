@@ -16,6 +16,8 @@
 
   const MIN_STEP = 44;
   const ROW_STEP = 50;
+  // Room above the first row for a selected card, which lifts and shows a check mark.
+  const TOP = 22;
   let width = $state(360);
   let wide = $state(typeof matchMedia !== "undefined" && matchMedia("(min-width: 900px)").matches);
   $effect(() => {
@@ -36,7 +38,7 @@
     const step = perRow > 1 ? Math.min(cw + 6, room / (perRow - 1)) : 0;
     const rowWidth = (perRow - 1) * step + cw;
     const offset = Math.max(0, (width - rowWidth) / 2);
-    return { rows, perRow, step, offset, height: (rows - 1) * ROW_STEP + ch + 12 };
+    return { rows, perRow, step, offset, height: (rows - 1) * ROW_STEP + ch + TOP };
   });
 </script>
 
@@ -60,7 +62,7 @@
       selected={selected.includes(card)}
       borrowed={borrowed.has(card)}
       onclick={() => ontoggle(card)}
-      style="position:absolute;left:{layout.offset + col * layout.step}px;top:{12 + row * ROW_STEP}px;z-index:{i +
+      style="position:absolute;left:{layout.offset + col * layout.step}px;top:{TOP + row * ROW_STEP}px;z-index:{i +
         1}"
     />
   {:else}
