@@ -58,9 +58,13 @@ class Smarts:
     joker_weight: float
     # Opens with its longest run rather than the first one it sees.
     open_longest: bool
-    # Holds back moves that only put new piles down from the hand (nobody
-    # else can use those cards yet) for this long, unless it is close to going
-    # out or racing. 0 turns it off.
+    # Plays moves on the table (where someone else might take the spot first)
+    # before moves that only put new piles down from the hand, which nobody
+    # else can use yet.
+    contested_first: bool = False
+    # Holds back hand-only moves this long while it is not close to going out
+    # or racing, even with nothing else to do. 0 turns it off. In simulations
+    # holding back made Expert lose more often, so no level uses it.
     patience: float = 0.0
     # Races (plays everything, faster) once an opponent has this few cards.
     race_below: int = 0
@@ -96,7 +100,7 @@ EXPERT = Level(
     "expert",
     Speed((0.5, 1.5), 0.5, 0.1, 0.2, (2.0, 3.0), 0.5),
     Moves("full", max_piles=99, miss=0.0, max_solves=80, time_limit=1.0, search_time=2.5),
-    Smarts("best", joker_weight=-0.25, open_longest=True, patience=6.0, race_below=3),
+    Smarts("best", joker_weight=-0.25, open_longest=True, contested_first=True, race_below=3),
 )
 
 LEVELS: dict[str, Level] = {level.name: level for level in (EASY, MEDIUM, HARD, EXPERT)}

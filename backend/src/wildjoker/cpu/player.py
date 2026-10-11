@@ -191,6 +191,9 @@ class CpuPlayer:
             moves = ready
         if not moves:
             return None, held
+        if smarts.contested_first and not self._racing:
+            # Spots on the table can be taken by someone else; the hand can wait.
+            moves = [m for m in moves if not m.private] or moves
         if smarts.pick == "any":
             return self.rng.choice(moves), held
         return max(moves, key=lambda m: (m.value, -len(m.stage), -m.cards)), held

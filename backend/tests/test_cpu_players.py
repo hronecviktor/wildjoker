@@ -1,14 +1,19 @@
 import asyncio
+import dataclasses
 import logging
 
 import pytest
 
-from wildjoker.cpu import EXPERT, CpuPlayers
+from wildjoker.cpu import EXPERT, LEVELS, CpuPlayers
 from wildjoker.cpu.simulate import InlineExecutor, VirtualTimeLoop, run
 from wildjoker.server import protocol as p
 from wildjoker.server.rooms import Room, Seat, Settings
 
 from .conftest import codes, make_game
+
+PATIENT = dataclasses.replace(
+    EXPERT, name="patient", smarts=dataclasses.replace(EXPERT.smarts, patience=6.0)
+)
 
 
 def virtual(coro):
@@ -29,7 +34,7 @@ class Table:
         self.room = Room("TEST", self.settings)
         self.room.seats = {"h": Seat("h", "Human", "t1"), "c": Seat("c", "CPU", "t2", cpu=level)}
         self.room.host = "h"
-        self.cpus = CpuPlayers(seed=1, run_blocking=_inline)
+        self.cpus = CpuPlayers({**LEVELS, "patient": PATIENT}, seed=1, run_blocking=_inline)
         self.cpus.watch(self.room)
         self.game = make_game(hands, table=table, deck=deck, opened=opened)
         self.room.game = self.game
@@ -191,18 +196,32 @@ def test_cpus_stop_when_the_room_closes_or_goes_back_to_the_lobby():
     virtual(main())
 
 
-def test_expert_holds_back_new_piles_until_it_races():
+def test_patience_holds_back_new_piles_until_racing():
     async def main():
         hand = "9S 9H 9D 2C 4D 6H KC QD"
-        t = Table("expert", {"h": "AS 3C 5C 7S 8C TD JS KH", "c": hand}, deck="2S 3S 4S 5S")
+        t = Table("patient", {"h": "AS 3C 5C 7S 8C TD JS KH", "c": hand}, deck="2S 3S 4S 5S")
         await t.until(lambda: len(t.game.players["c"].hand) < 8)
-        patience = EXPERT.smarts.patience
+        patience = PATIENT.smarts.patience
         assert t.loop.time() - t.start >= patience and len(t.game.deck) == 4
         await t.close()
 
-        t = Table("expert", {"h": "AS 3C", "c": hand}, deck="2S 3S 4S 5S")
+        t = Table("patient", {"h": "AS 3C", "c": hand}, deck="2S 3S 4S 5S")
         await t.until(lambda: len(t.game.players["c"].hand) < 8)
         assert t.loop.time() - t.start < patience / 2  # racing: the human has 2 cards
+        await t.close()
+
+    virtual(main())
+
+
+def test_expert_plays_contested_moves_first():
+    async def main():
+        # 8H on the run could be taken by someone else; the set of 9s can't.
+        hand = "9S 9H 9D 8H 2C 4D KC QD"
+        t = Table("expert", {"h": "AS 3C 5C 7S 8C TD JS", "c": hand}, ["5H 6H 7H"], deck="2S")
+        await t.until(lambda: len(t.game.players["c"].hand) < 8)
+        assert "5H 6H 7H 8H" in t.piles()  # the first move takes the spot
+        await t.until(lambda: len(t.game.players["c"].hand) < 5)
+        assert t.piles() == ["5H 6H 7H 8H", "9S 9H 9D"]
         await t.close()
 
     virtual(main())
