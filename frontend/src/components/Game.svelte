@@ -1,6 +1,7 @@
 <script lang="ts">
   // The game table: players, table piles, the staging sheet, the hand, and
   // keyboard shortcuts.
+  import { untrack } from "svelte";
   import { t, tn } from "../i18n/index.svelte";
   import { GameController } from "../lib/game.svelte";
   import { focusGroup, navigate } from "../lib/keynav";
@@ -17,7 +18,7 @@
   const game = new GameController(conn);
   $effect(() => {
     void conn.state;
-    game.sync();
+    untrack(() => game.sync());
   });
 
   let help = $state(false);
