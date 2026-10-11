@@ -82,6 +82,7 @@
           class="place"
           data-nav="staging"
           disabled={!hasSelection}
+          data-testid="place-here"
           aria-label={t("staging.place_here_n", { n: n + 1 })}
           onclick={() => game.place({ kind: "pile", key: pile.key })}>＋</button
         >
@@ -93,7 +94,13 @@
 
   {#if hasSelection}
     <div class="actions">
-      <button type="button" class="btn" data-nav="staging-actions" onclick={() => game.place({ kind: "new" })}>
+      <button
+        type="button"
+        class="btn"
+        data-nav="staging-actions"
+        data-testid="staging-new-pile"
+        onclick={() => game.place({ kind: "new" })}
+      >
         {t("staging.new_pile")}
       </button>
       {#if game.selectedInPiles.length}
@@ -102,7 +109,7 @@
         </button>
       {/if}
       {#if game.splitPoint}
-        <button type="button" class="btn" data-nav="staging-actions" onclick={() => game.split()}>
+        <button type="button" class="btn" data-nav="staging-actions" data-testid="split" onclick={() => game.split()}>
           ✂ {t("staging.split")}
         </button>
       {/if}

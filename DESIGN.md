@@ -1,8 +1,6 @@
 # Wild Joker design
 
-How the game in [RULES.md](RULES.md) is built. The interactive tutorial
-("teach me how to play") is planned for later and is out of scope here, but
-the design leaves room for it.
+How the game in [RULES.md](RULES.md) is built.
 
 ## Requirements
 
@@ -143,6 +141,18 @@ draws. Difficulty is a combination of three separate dimensions:
   with the browser's language as the default.
 - All text lives in translation files (`en.json`, `sk.json`); a test fails
   when a key is missing from either.
+
+## Tutorial
+
+"How to play" on the start screen starts a private game against a scripted
+Teacher. The server deals fixed hands and deck order
+(`backend/src/wildjoker/server/tutorial.py`), and the Teacher only moves when
+a tutorial step asks it to (`tutorial_action`), so the game always goes the
+same way. The client's coach panel (`frontend/src/lib/tutorial.ts`) explains
+each step and rings what to tap; a step ends when its goal is reached in the
+game state. Covered by doing: drawing, opening, sets, adding to a pile,
+jokers, splitting, locked piles and taking from a pile. Moves get 60 seconds
+instead of 15.
 
 ## Voice chat
 

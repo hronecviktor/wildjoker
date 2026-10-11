@@ -22,6 +22,7 @@ from ..engine import Config, Game, GameError
 from ..engine.game import MAX_PLAYERS, MIN_PLAYERS, STAGING_TIMEOUT
 from ..solver import is_stalemate
 from . import protocol as p
+from . import tutorial
 
 log = logging.getLogger(__name__)
 
@@ -80,6 +81,8 @@ class Room:
     version: int = 0
     # Only CPUs are still playing and a human asked to speed them up.
     fast_forward: bool = False
+    # A tutorial room: one player and the scripted Teacher (see ``tutorial``).
+    tutorial: bool = False
     last_activity: float = 0.0
     closed: bool = False
     # Called after every change and on close; CPU players hook in here.
@@ -158,6 +161,8 @@ class Room:
             case p.Start():
                 self._host_in_lobby(pid)
                 self._start()
+            case p.TutorialAction(action=action):
+                self._tutorial_action(pid, action, now)
             case p.FastForward(on=on):
                 if seat.cpu is not None:
                     raise GameError("bad_player")
@@ -262,6 +267,7 @@ class Room:
             "you": pid,
             "options": {"decks": self.decks, "hand_size": self.hand_size},
             "fast_forward": self.fast_forward,
+            "tutorial": self.tutorial,
             "players": players,
             "game": None,
         }
@@ -399,6 +405,30 @@ class Room:
         self.phase = "playing"
         self.changed()
 
+    def _tutorial_action(self, pid: str, action: str, now: float) -> None:
+        """The Teacher's scripted moves, asked for by the tutorial steps."""
+        teacher = self._teacher()
+        if not self.tutorial or pid != self.host or teacher is None:
+            raise GameError("not_tutorial")
+        if self.phase != "playing" or self.game is None:
+            raise GameError("no_game")
+        game = self.game
+        if action == "teacher_opens":
+            tutorial.teacher_opens(game, teacher)
+            self.changed()
+        elif action == "teacher_borrows" and tutorial.teacher_borrows(game, teacher, now):
+            self.changed()
+
+            def give_back() -> None:
+                if self.game is game and self.phase == "playing":
+                    tutorial.teacher_returns(game, teacher)
+                    self.changed()
+
+            asyncio.get_running_loop().call_later(tutorial.BORROW_SECONDS, give_back)
+
+    def _teacher(self) -> str | None:
+        return next((s.id for s in self.seats.values() if s.id != self.host), None)
+
     def _leave(self, seat: Seat) -> None:
         """The player leaves; the caller closes their connection."""
         if self.phase == "playing" and self.game and seat.id in self.game.players:
@@ -444,6 +474,16 @@ class RoomManager:
         for hook in self.on_room_created:
             hook(room)
         return room, room.add_seat(name, None)
+
+    def create_tutorial(self, name: str, teacher: str) -> tuple[Room, Seat]:
+        """A private tutorial game, already started; see ``tutorial``."""
+        room, seat = self.create(name)
+        room.tutorial = True
+        teacher_seat = room.add_seat(teacher, None, cpu="easy")
+        room.game = tutorial.new_game(seat.id, teacher_seat.id)
+        room.phase = "playing"
+        room.changed()
+        return room, seat
 
     def join(self, code: str, name: str) -> tuple[Room, Seat]:
         room = self._get(code)

@@ -21,7 +21,7 @@
   }
 </script>
 
-<ul class="strip" aria-label={t("players.title")}>
+<ul class="strip" aria-label={t("players.title")} data-testid="players">
   {#each players as p (p.id)}
     <li
       class="player"

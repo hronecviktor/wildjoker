@@ -433,7 +433,8 @@ class CpuPlayers:
             return  # plain unit tests drive rooms without a loop
         game = room.game
         wanted: dict[str, str] = {}
-        if room.phase == "playing" and game is not None and not room.closed:
+        # The tutorial's Teacher is scripted, not a CPU player.
+        if room.phase == "playing" and game is not None and not room.closed and not room.tutorial:
             active = set(game.active)
             wanted = {s.id: s.cpu for s in room.seats.values() if s.cpu and s.id in active}
         for key, (player, task) in list(self.players.items()):

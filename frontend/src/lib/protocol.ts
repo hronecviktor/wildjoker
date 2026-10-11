@@ -77,6 +77,8 @@ export interface StateMessage {
   options: { decks: number; hand_size: number };
   /** CPUs are sped up (only CPUs are still playing). */
   fast_forward: boolean;
+  /** A tutorial game against the scripted Teacher. */
+  tutorial: boolean;
   players: PlayerView[];
   game: GameView | null;
 }

@@ -78,6 +78,11 @@ export class Connection {
     await this.join({ type: "create", name });
   }
 
+  /** Start a tutorial game against the scripted Teacher. */
+  async tutorial(name: string, teacher: string): Promise<void> {
+    await this.join({ type: "tutorial", name, teacher });
+  }
+
   /** Join a room by its code. */
   async joinRoom(code: string, name: string): Promise<void> {
     await this.join({ type: "join", code, name });

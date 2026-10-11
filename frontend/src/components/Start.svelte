@@ -3,7 +3,7 @@
   // Opened from an invite link (/j/ABCD) it only asks for the name.
   import { errorText, t } from "../i18n/index.svelte";
   import { ServerError } from "../lib/connection.svelte";
-  import { conn } from "../lib/session.svelte";
+  import { conn, startTutorial } from "../lib/session.svelte";
   import { load, save } from "../lib/storage";
   import LangPicker from "./LangPicker.svelte";
 
@@ -35,6 +35,21 @@
 
   const create = () => go(() => conn.create(name.trim()));
   const join = (c: string) => go(() => conn.joinRoom(c.trim().toUpperCase(), name.trim()));
+
+  async function tutorial() {
+    if (busy) return;
+    busy = true;
+    error = "";
+    if (nameOk) save("name", name.trim());
+    try {
+      await startTutorial(name);
+    } catch (e) {
+      if (!(e instanceof ServerError)) throw e;
+      error = errorText(e.code);
+    } finally {
+      busy = false;
+    }
+  }
 </script>
 
 <main class="start">
@@ -104,6 +119,11 @@
     </form>
   {/if}
 
+  {#if !invite}
+    <button type="button" class="btn big tutorial" disabled={busy} onclick={tutorial} data-testid="tutorial-start">
+      🎓 {t("start.tutorial")}
+    </button>
+  {/if}
   {#if error}<p class="error" role="alert">{error}</p>{/if}
 </main>
 

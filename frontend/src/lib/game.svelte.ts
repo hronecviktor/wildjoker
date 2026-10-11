@@ -21,6 +21,8 @@ export class GameController {
   /** When the staging area expires, as a performance.now() timestamp. */
   deadline = $state<number | null>(null);
   busy = $state(false);
+  /** The tutorial only allows drawing when a step asks for it. */
+  allowDraw = $state(true);
   /** Cards that just arrived in the hand or on the table, flashed for a few seconds. */
   freshHand = $state.raw<Set<number>>(new Set());
   freshTable = $state.raw<Set<number>>(new Set());
@@ -125,7 +127,7 @@ export class GameController {
 
   /** Draws don't take the busy lock, so quick repeated draws all go through. */
   async draw(): Promise<void> {
-    if (!this.active) return;
+    if (!this.active || !this.allowDraw) return;
     try {
       await this.conn.request({ type: "draw" });
     } catch (e) {

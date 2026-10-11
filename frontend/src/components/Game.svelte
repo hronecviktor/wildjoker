@@ -13,6 +13,7 @@
   import ShortcutHelp from "./ShortcutHelp.svelte";
   import StagingSheet from "./StagingSheet.svelte";
   import TablePile from "./TablePile.svelte";
+  import Tutorial from "./Tutorial.svelte";
   import { tableOrder } from "../lib/tableOrder";
   import VoiceControls from "./VoiceControls.svelte";
 
@@ -183,6 +184,8 @@
 
   <PlayerStrip players={room.players} you={room.you} host={room.host} />
 
+  {#if room.tutorial}<Tutorial {game} {room} />{/if}
+
   <section class="table" aria-label={t("table.title")} data-testid="table"
     data-density={density}
     bind:this={tableEl}
@@ -214,7 +217,7 @@
         class="btn"
         data-nav="actions"
         data-testid="draw"
-        disabled={deckEmpty}
+        disabled={deckEmpty || !game.allowDraw}
         onclick={() => game.draw()}
         title={t("game.draw") + " (D)"}
       >
@@ -263,7 +266,9 @@
         >{game.sort === "suit" ? "♠♥" : "A23"}</button
       >
     </div>
-    {#if !game.opened}
+    {#if room.tutorial}
+      <!-- the tutorial's coach panel explains instead -->
+    {:else if !game.opened}
       <p class="tip">{hasSelection && !game.canOpen ? t("game.open_hint") : t("game.open_tip")}</p>
     {:else if !game.drafting && !hasSelection && view.table.length > 0}
       <p class="tip">{t("game.move_tip")}</p>

@@ -47,6 +47,14 @@ class Join(Message):
     name: Name
 
 
+class Tutorial(Message):
+    """A private tutorial game against a scripted Teacher (see ``tutorial``)."""
+
+    type: Literal["tutorial"]
+    name: Name
+    teacher: Name
+
+
 class Resume(Message):
     type: Literal["resume"]
     code: RoomCode
@@ -120,6 +128,11 @@ class VoteDraw(Message):
     type: Literal["vote_draw"]
 
 
+class TutorialAction(Message):
+    type: Literal["tutorial_action"]
+    action: Literal["teacher_opens", "teacher_borrows"]
+
+
 class FastForward(Message):
     type: Literal["fast_forward"]
     on: bool
@@ -155,6 +168,7 @@ ClientMessage = Annotated[
     Create
     | Join
     | Resume
+    | Tutorial
     | SetOptions
     | AddCpu
     | SetCpuLevel
@@ -169,6 +183,7 @@ ClientMessage = Annotated[
     | Commit
     | VoteDraw
     | FastForward
+    | TutorialAction
     | VoiceJoin
     | VoiceLeave
     | VoiceMute

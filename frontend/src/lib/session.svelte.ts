@@ -63,8 +63,10 @@ function stopVoice(): void {
 /** Leave the room for good, and voice with it. */
 export async function leaveRoom(): Promise<void> {
   stopVoice();
-  await act(() => conn.leave());
+  // Before leaving: the start screen reads the address when it appears, and
+  // the room's /j/CODE would make it ask to join that room again.
   history.replaceState(null, "", "/");
+  await act(() => conn.leave());
 }
 
 export function leaveVoice(): void {
@@ -96,4 +98,10 @@ export async function act<T>(fn: () => Promise<T>): Promise<T | undefined> {
     if (e instanceof ServerError) toast(errorText(e.code), "error");
     else throw e;
   }
+}
+
+/** Start the tutorial, under the saved name if there is one. */
+export async function startTutorial(name: string): Promise<void> {
+  await conn.tutorial(name.trim() || t("tutorial.you"), t("tutorial.teacher_name"));
+  history.replaceState(null, "", `/j/${conn.code}`);
 }

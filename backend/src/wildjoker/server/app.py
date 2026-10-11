@@ -84,12 +84,14 @@ async def game_socket(ws: WebSocket) -> None:
                 except (ValueError, ValidationError) as e:
                     raise GameError("bad_message") from e
 
-                if isinstance(msg, (p.Create, p.Join, p.Resume)):
+                if isinstance(msg, (p.Create, p.Tutorial, p.Join, p.Resume)):
                     if seat is not None:
                         raise GameError("already_joined")
                     match msg:
                         case p.Create(name=name):
                             room, seat = manager.create(name)
+                        case p.Tutorial(name=name, teacher=teacher):
+                            room, seat = manager.create_tutorial(name, teacher)
                         case p.Join(code=code, name=name):
                             room, seat = manager.join(code, name)
                         case p.Resume(code=code, token=token):

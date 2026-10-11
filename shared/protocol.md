@@ -25,6 +25,7 @@ every player, after every change (including other players' actions).
 | Client message | Notes |
 |---|---|
 | `{"type": "create", "name": "Viktor"}` | New room; you are the host. |
+| `{"type": "tutorial", "name": "Viktor", "teacher": "Teacher"}` | A private tutorial game against a scripted Teacher (`teacher` is its display name), already started with fixed hands; see `backend/src/wildjoker/server/tutorial.py`. Moves have 60 s. The Teacher only moves when asked with `tutorial_action`. |
 | `{"type": "join", "code": "ABCD", "name": "Hana"}` | Code is case-insensitive. Only in the lobby, at most 8 seats. |
 | `{"type": "resume", "code": "ABCD", "token": "..."}` | Take your seat back after a reload or dropped connection. Also takes a seat back from the CPU that stood in after you left. |
 
@@ -63,6 +64,7 @@ connection after replying.
 | `{"type": "cancel"}` | | Put staged piles back unchanged. |
 | `{"type": "commit", "piles": [[ids], ...]}` | `piles`: new pile ids | The final piles. May use any card from your staged piles and your hand. Staged cards you leave out go to your hand. Works without staging to put new piles down from your hand. An empty list with staged piles takes them all into your hand. |
 | `{"type": "vote_draw"}` | | Once the deck is empty: agree to end as a draw. Votes reset when anyone commits. |
+| `{"type": "tutorial_action", "action": "teacher_opens"}` | | Tutorial rooms only, by the player: the Teacher's scripted moves. `teacher_opens`: opens with A♦–6♦ and puts down four 9s. `teacher_borrows`: holds the player's hearts run for 4 s, then puts it back. Error `not_tutorial` elsewhere. |
 | `{"type": "fast_forward", "on": true}` | | Humans only, once everyone still holding cards is a CPU: CPUs play 20× faster (`on: false` back to normal). Switches itself off when a human plays again or the game ends. Error `humans_playing` otherwise. |
 
 The client builds the move locally (the server never sees a half-finished
@@ -132,6 +134,7 @@ Sent as `{"type": "state", ...}` after every change, tailored to each player:
   "you": "<your player id>",
   "options": {"decks": 2, "hand_size": 5},
   "fast_forward": false,
+  "tutorial": false,
   "players": [
     {
       "id": "1a2b3c4d", "name": "Viktor", "cpu": null,
@@ -171,4 +174,4 @@ Sent as `{"type": "state", ...}` after every change, tailored to each player:
 `unknown_player`, `deck_empty`, `deck_not_empty`, `already_opened`,
 `invalid_opening`, `not_opened`, `bad_card`, `bad_pile`, `pile_locked`,
 `not_staging`, `staging_expired`, `empty_move`, `invalid_pile`,
-`not_in_voice`, `humans_playing`.
+`not_in_voice`, `humans_playing`, `not_tutorial`.

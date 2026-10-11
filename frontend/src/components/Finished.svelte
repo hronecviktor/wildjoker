@@ -2,7 +2,7 @@
   // The end of a game: finishing order, and the host can go back to the lobby.
   import { t } from "../i18n/index.svelte";
   import type { StateMessage } from "../lib/protocol";
-  import { act, conn, leaveRoom } from "../lib/session.svelte";
+  import { act, conn, leaveRoom, startTutorial } from "../lib/session.svelte";
   import LangPicker from "./LangPicker.svelte";
   import VoiceControls from "./VoiceControls.svelte";
 
@@ -14,6 +14,12 @@
   const medals = ["🥇", "🥈", "🥉"];
   // Numbered like players[].place: players sharing a place (a draw) share the number.
   const numbered = $derived(places.map((ids, i) => ({ place: i + 1, ids })));
+
+  async function practiseAgain() {
+    const me = room.players.find((p) => p.id === room.you)?.name ?? "";
+    await leaveRoom();
+    await startTutorial(me);
+  }
 </script>
 
 <main class="finished">
@@ -37,17 +43,31 @@
     {/each}
   </ol>
 
+  {#if room.tutorial}
+    <section class="outro" data-testid="tutorial-outro">
+      <h2>{t("tutorial.outro_title")}</h2>
+      <p>{t("tutorial.outro")}</p>
+    </section>
+  {/if}
+
   <footer class="actions">
-    <button type="button" class="btn" onclick={leaveRoom}>{t("lobby.leave")}</button>
-    {#if isHost}
-      <button
-        type="button"
-        class="btn primary big"
-        data-testid="back-to-lobby"
-        onclick={() => act(() => conn.request({ type: "back_to_lobby" }))}>{t("finished.back_to_lobby")}</button
+    {#if room.tutorial}
+      <button type="button" class="btn" onclick={practiseAgain}>{t("tutorial.again")}</button>
+      <button type="button" class="btn primary big" data-testid="tutorial-play" onclick={leaveRoom}
+        >{t("tutorial.play")}</button
       >
     {:else}
-      <p class="wait">{t("finished.waiting_for_host")}</p>
+      <button type="button" class="btn" onclick={leaveRoom}>{t("lobby.leave")}</button>
+      {#if isHost}
+        <button
+          type="button"
+          class="btn primary big"
+          data-testid="back-to-lobby"
+          onclick={() => act(() => conn.request({ type: "back_to_lobby" }))}>{t("finished.back_to_lobby")}</button
+        >
+      {:else}
+        <p class="wait">{t("finished.waiting_for_host")}</p>
+      {/if}
     {/if}
   </footer>
 </main>
@@ -103,6 +123,21 @@
     margin-left: 6px;
     color: var(--muted);
     font-size: 14px;
+  }
+  .outro {
+    margin: 0 0 16px;
+    padding: 14px 16px;
+    border: 2px solid #f5b301;
+    border-radius: 12px;
+    background: var(--panel);
+  }
+  .outro h2 {
+    margin: 0 0 6px;
+    font-size: 20px;
+  }
+  .outro p {
+    margin: 0;
+    line-height: 1.45;
   }
   .actions {
     display: flex;
