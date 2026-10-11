@@ -189,10 +189,15 @@ def create_app(
             yield
         finally:
             task.cancel()
+            await app.state.cpus.close()
             if pool is not None:
                 pool.shutdown(cancel_futures=True)
 
     app = Starlette(routes=routes, lifespan=lifespan)
+    from ..cpu import CpuPlayers  # here: cpu imports the server's protocol
+
     app.state.manager = RoomManager(settings)
     app.state.ice = ice or IceConfig.from_env()
+    app.state.cpus = CpuPlayers()
+    app.state.cpus.attach(app.state.manager)
     return app

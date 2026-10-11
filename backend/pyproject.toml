@@ -24,6 +24,8 @@ build-backend = "hatchling.build"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+markers = ["slow: long simulations, run with -m slow"]
+addopts = "-m 'not slow'"
 
 [tool.ruff]
 line-length = 100

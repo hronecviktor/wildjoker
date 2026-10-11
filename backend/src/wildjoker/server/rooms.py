@@ -43,8 +43,11 @@ class Settings:
     # Rooms with nobody connected are removed after this many seconds.
     room_idle: float = 600.0
     clock: Callable[[], float] = time.monotonic
-    # Where stalemate searches run; None means the loop's default executor.
+    # Where stalemate searches and CPU move searches run; None means the
+    # loop's default executor.
     executor: Executor | None = None
+    # Scales how fast CPU players react, think and draw (2.0 = twice as fast).
+    cpu_speed: float = 1.0
 
 
 @dataclass
@@ -74,7 +77,8 @@ class Room:
     game: Game | None = None
     version: int = 0
     last_activity: float = 0.0
-    # Called after every change; CPU players hook in here.
+    closed: bool = False
+    # Called after every change and on close; CPU players hook in here.
     listeners: list[Callable[[Room], None]] = field(default_factory=list)
     _expiry: asyncio.TimerHandle | None = None
     _stalemate: asyncio.TimerHandle | None = None
@@ -288,12 +292,15 @@ class Room:
                 seat.conn.send(message)
 
     def close(self) -> None:
+        self.closed = True
         for handle in (self._expiry, self._stalemate):
             if handle:
                 handle.cancel()
         for seat in self.seats.values():
             if seat.conn is not None:
                 seat.conn.close()
+        for listener in list(self.listeners):
+            listener(self)
 
     def _schedule_timers(self) -> None:
         try:
