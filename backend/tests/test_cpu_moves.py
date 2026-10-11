@@ -57,6 +57,36 @@ def test_easy_makes_new_piles_from_the_hand():
     assert move.private and move.shed == 3
 
 
+@pytest.mark.parametrize("level", LEVELS.values(), ids=lambda level: level.name)
+def test_no_level_pads_runs_with_jokers(level):
+    game = make_game({"a": "JK 2C"}, table=["5H 6H 7H"], opened="a")
+    assert moves_for(level, game) == []
+
+
+def test_easy_uses_a_joker_to_bridge_a_gap():
+    game = make_game({"a": "JK 9H 2C"}, table=["5H 6H 7H"], opened="a")
+    [move] = moves_for(EASY, game)
+    assert move.shed == 2
+    apply(game, move)
+    assert table(game) == ["5H 6H 7H JK 9H"]
+
+
+def test_easy_plays_real_cards_and_keeps_the_joker():
+    game = make_game({"a": "8H JK 2C"}, table=["5H 6H 7H"], opened="a")
+    [move] = moves_for(EASY, game)
+    apply(game, move)
+    assert table(game) == ["5H 6H 7H 8H"]
+    assert "JK" in [c.code for c in game.players["a"].hand]
+
+
+def test_jokers_are_played_when_nothing_is_left_to_save_them_for():
+    # The player passes weight 1 once the deck is empty, when racing or
+    # when almost out.
+    game = make_game({"a": "JK 2C"}, table=["5H 6H 7H"], opened="a")
+    [move] = moves_for(EASY, game, joker_weight=1.0)
+    assert move.shed == 1
+
+
 def test_easy_and_medium_never_split():
     # The 5H only fits by splitting A-10H into A-5H and 5H-10H.
     game = make_game({"a": "5H"}, table=["AH 2H 3H 4H 5H 6H 7H 8H 9H TH"], opened="a")
@@ -119,20 +149,21 @@ def test_untouched_piles_are_not_staged():
         assert move.stage == (1,), level.name
 
 
-def test_hard_keeps_jokers_back():
+@pytest.mark.parametrize("level", LEVELS.values(), ids=lambda level: level.name)
+def test_cpus_keep_jokers_back(level):
     game = make_game({"a": "5H 6H 7H JK 2C 9D"}, opened="a")
-    assert best(moves_for(HARD, game)).shed == 3
-    assert best(moves_for(MEDIUM, game)).shed == 4
-    # ...but uses a joker when it lets real cards out.
+    assert best(moves_for(level, game)).shed == 3
+    # ...but use a joker when it lets real cards out.
     game = make_game({"a": "5H 6H JK 2C 9D"}, opened="a")
-    assert best(moves_for(HARD, game)).shed == 3
+    assert best(moves_for(level, game)).shed == 3
 
 
-def test_hard_takes_a_spare_joker():
+@pytest.mark.parametrize("level", [MEDIUM, HARD, EXPERT], ids=lambda level: level.name)
+def test_taking_a_spare_joker(level):
     game = make_game({"a": "2C 9D KS"}, table=["5H 6H 7H JK"], opened="a")
-    move = best(moves_for(HARD, game))
+    move = best(moves_for(level, game))
     assert move.shed == -1 and move.value > 0
-    assert best(moves_for(MEDIUM, game)) is None
+    assert moves_for(EASY, game) == []  # Easy can't take cards from piles
 
 
 def test_nothing_to_do():

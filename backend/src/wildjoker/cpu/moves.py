@@ -114,25 +114,45 @@ def decode(
     )
 
 
-def additions(hand: Sequence[Card], piles: Sequence[TablePile]) -> list[Move]:
-    """For each pile, the hand cards that can be added to it one by one."""
+def additions(
+    hand: Sequence[Card], piles: Sequence[TablePile], joker_weight: float = 1.0
+) -> list[Move]:
+    """For each pile, the hand cards that can be added to it one by one.
+
+    Real cards go first. With a negative ``joker_weight`` (jokers are worth
+    keeping) a joker is only added where it lets another real card in, e.g.
+    bridging 5H 6H _ 8H; it never just pads the end of a run.
+    """
     moves = []
     for pid, ids in piles:
         pile = [Card(i) for i in ids]
         rest = list(hand)
-        added = True
-        while added:
-            added = False
-            for card in rest:
-                if arrange([*pile, card]) is not None:
-                    pile.append(card)
-                    rest.remove(card)
-                    added = True
-                    break
-        n = len(pile) - len(ids)
-        if n:
-            moves.append(Move((pid,), (tuple(c.id for c in pile),), n, float(n), n))
+        while _add_one(pile, rest, joker_weight):
+            pass
+        added = pile[len(ids) :]
+        if added:
+            value = sum(_weight(c, joker_weight) for c in added)
+            moves.append(Move((pid,), (tuple(c.id for c in pile),), len(added), value, len(added)))
     return moves
+
+
+def _add_one(pile: list[Card], rest: list[Card], joker_weight: float) -> bool:
+    """Add one real card (or a joker, see ``additions``) to ``pile`` from ``rest``."""
+    real = [c for c in rest if not c.is_joker]
+    jokers = [c for c in rest if c.is_joker]
+    for card in real + (jokers if joker_weight >= 0 else []):
+        if arrange([*pile, card]) is not None:
+            pile.append(card)
+            rest.remove(card)
+            return True
+    if joker_weight < 0 and jokers:
+        for card in real:
+            if arrange([*pile, jokers[0], card]) is not None:
+                pile += [jokers[0], card]
+                rest.remove(jokers[0])
+                rest.remove(card)
+                return True
+    return False
 
 
 def is_split(move: Move, piles: Sequence[TablePile]) -> bool:
@@ -238,7 +258,7 @@ def find_moves(
 
     keep(solver([]))  # new piles from the hand alone
     if moves.kind == "add":
-        found += additions(hand, piles)
+        found += [m for m in additions(hand, piles, joker_weight) if m.value > EPS]
         return Search(found, solver.calls, solver.seconds)
 
     candidates = relevant(hand, piles)

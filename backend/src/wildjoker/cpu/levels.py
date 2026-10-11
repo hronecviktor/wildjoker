@@ -54,7 +54,9 @@ class Smarts:
     # "any": plays whichever move it found; "best": the one shedding most.
     pick: Literal["any", "best"]
     # Solver weight of a joker (real cards weigh 1). Below zero, jokers stay
-    # in the hand unless they let real cards out.
+    # in the hand unless they let real cards out. Every level keeps jokers:
+    # padding runs with them is a waste, not a sign of a weaker player. (The
+    # player switches to 1 when there's nothing left to save them for.)
     joker_weight: float
     # Opens with its longest run rather than the first one it sees.
     open_longest: bool
@@ -82,13 +84,13 @@ EASY = Level(
     "easy",
     Speed((6.0, 10.0), 2.0, 0.5, 1.0, (8.0, 12.0), 1.5),
     Moves("add", max_piles=1, miss=0.3),
-    Smarts("any", joker_weight=1.0, open_longest=False),
+    Smarts("any", joker_weight=-0.25, open_longest=False),
 )
 MEDIUM = Level(
     "medium",
     Speed((3.0, 6.0), 1.5, 0.3, 0.6, (5.0, 8.0), 1.0),
     Moves("take", max_piles=1, miss=0.15, max_solves=25),
-    Smarts("best", joker_weight=0.9, open_longest=True),
+    Smarts("best", joker_weight=-0.25, open_longest=True),
 )
 HARD = Level(
     "hard",

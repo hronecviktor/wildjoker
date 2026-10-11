@@ -94,11 +94,13 @@ draws. Difficulty is a combination of three separate dimensions:
 |---|---|---|---|---|
 | **Reaction speed:** delay before it notices a new table or a new card | 6–10 s | 3–6 s | 1.5–3 s | 0.5–1.5 s |
 | **Move complexity:** what kinds of moves it can find | add to a pile, new pile from hand | + take cards from piles, swap jokers | + split piles, rearrange 2–3 piles | full solver across any number of piles |
-| **Smartness:** how it plays | plays anything it finds | plays the move that sheds most cards | + keeps jokers for later, opens early | + waits to play cards others can't use, watches who is close to going out |
+| **Smartness:** how it plays | plays anything it finds | plays the move that sheds most cards | + opens with its longest run | + plays contested moves first, races when someone is close to going out |
 
 - Each level also takes time to "work out" a move, proportional to how
   complicated it is, so an Expert CPU is fast but not instant.
 - Easy and Medium sometimes miss moves they could have made.
+- Every level keeps its jokers unless they let a real card out, or there's
+  nothing left to save them for (deck empty, racing, almost out).
 - CPUs don't draw repeatedly while they still have a useful move.
 - The settings are kept separate in code, so mixed or custom levels are
   easy to add later.
