@@ -5,7 +5,7 @@
   import { t, tn } from "../i18n/index.svelte";
   import { GameController } from "../lib/game.svelte";
   import { focusGroup, navigate } from "../lib/keynav";
-  import { act, conn, toggleMute } from "../lib/session.svelte";
+  import { conn, leaveRoom, toggleMute } from "../lib/session.svelte";
   import { toast } from "../lib/toasts.svelte";
   import Hand from "./Hand.svelte";
   import LangPicker from "./LangPicker.svelte";
@@ -99,9 +99,7 @@
   }
 
   async function leave() {
-    if (!confirm(t("game.leave_confirm"))) return;
-    await act(() => conn.leave());
-    history.replaceState(null, "", "/");
+    if (confirm(t("game.leave_confirm"))) await leaveRoom();
   }
 </script>
 
@@ -162,7 +160,7 @@
         class="btn"
         data-nav="actions"
         data-testid="draw"
-        disabled={deckEmpty || game.busy}
+        disabled={deckEmpty}
         onclick={() => game.draw()}
         title={t("game.draw") + " (D)"}
       >

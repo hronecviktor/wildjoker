@@ -2,7 +2,7 @@
   // The end of a game: finishing order, and the host can go back to the lobby.
   import { t } from "../i18n/index.svelte";
   import type { StateMessage } from "../lib/protocol";
-  import { act, conn } from "../lib/session.svelte";
+  import { act, conn, leaveRoom } from "../lib/session.svelte";
   import LangPicker from "./LangPicker.svelte";
   import VoiceControls from "./VoiceControls.svelte";
 
@@ -12,7 +12,6 @@
   const name = (id: string) => room.players.find((p) => p.id === id)?.name ?? "?";
   const places = $derived(room.game?.places ?? []);
   const medals = ["🥇", "🥈", "🥉"];
-  const leave = () => act(() => conn.leave()).then(() => history.replaceState(null, "", "/"));
   // Numbered like players[].place: players sharing a place (a draw) share the number.
   const numbered = $derived(places.map((ids, i) => ({ place: i + 1, ids })));
 </script>
@@ -39,7 +38,7 @@
   </ol>
 
   <footer class="actions">
-    <button type="button" class="btn" onclick={leave}>{t("lobby.leave")}</button>
+    <button type="button" class="btn" onclick={leaveRoom}>{t("lobby.leave")}</button>
     {#if isHost}
       <button
         type="button"

@@ -20,9 +20,14 @@ fi
 
 server=""
 if ! curl -sf "http://127.0.0.1:$PORT/healthz" >/dev/null; then
-  (cd backend && uv run python -m wildjoker.server --port "$PORT" >/tmp/wildjoker-e2e-server.log 2>&1) &
+  (cd backend && exec uv run python -m wildjoker.server --port "$PORT" >/tmp/wildjoker-e2e-server.log 2>&1) &
   server=$!
-  trap 'pkill -P $server 2>/dev/null; kill $server 2>/dev/null || true' EXIT
+  stop_server() {
+    pkill -P "$server" 2>/dev/null; kill "$server" 2>/dev/null
+    # uv runs python as a child; wait until the port is free so the next run starts its own.
+    for _ in $(seq 50); do curl -sf "http://127.0.0.1:$PORT/healthz" >/dev/null || return 0; sleep 0.2; done
+  }
+  trap stop_server EXIT
   for _ in $(seq 50); do curl -sf "http://127.0.0.1:$PORT/healthz" >/dev/null && break; sleep 0.2; done
 fi
 

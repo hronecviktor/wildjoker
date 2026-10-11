@@ -32,6 +32,11 @@ describe("translations", () => {
     for (const kind of EVENT_KINDS) expect(en, kind).toHaveProperty([`event.${kind}`]);
   });
 
+  it("cover every voice error code", () => {
+    const codes = ["permission_denied", "no_device", "device_busy", "insecure_context", "unsupported", "failed"];
+    for (const code of codes) expect(en, code).toHaveProperty([`voice.error.${code}`]);
+  });
+
   it("cover every error code listed in shared/protocol.md", () => {
     const doc = readFileSync(fileURLToPath(new URL("../../../shared/protocol.md", import.meta.url)), "utf8");
     const section = doc.split("## Error codes")[1] ?? "";
