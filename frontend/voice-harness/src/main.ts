@@ -16,8 +16,10 @@ const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as 
 const pcs: RTCPeerConnection[] = [];
 const env = browserEnv();
 const realCreate = env.createPeerConnection;
+// ?relay forces audio through the TURN server, to test it.
+const relayOnly = new URLSearchParams(location.search).has("relay");
 env.createPeerConnection = (config) => {
-  const pc = realCreate(config);
+  const pc = realCreate(relayOnly ? { ...config, iceTransportPolicy: "relay" } : config);
   pcs.push(pc);
   return pc;
 };
@@ -127,8 +129,13 @@ async function stats() {
     let bytes = 0;
     let sent = 0;
     let level = 0;
-    (await pc.getStats()).forEach((s) => {
-      if (s.type === "inbound-rtp" && s.kind === "audio") {
+    let candidate = "";
+    const report = await pc.getStats();
+    report.forEach((s) => {
+      if (s.type === "transport" && s.selectedCandidatePairId) {
+        const pair = report.get(s.selectedCandidatePairId);
+        candidate = report.get(pair?.localCandidateId)?.candidateType ?? "";
+      } else if (s.type === "inbound-rtp" && s.kind === "audio") {
         bytes += s.bytesReceived ?? 0;
         level = Math.max(level, s.audioLevel ?? 0);
       } else if (s.type === "outbound-rtp" && s.kind === "audio") {
@@ -144,6 +151,7 @@ async function stats() {
       bytes,
       sent,
       level,
+      candidate,
       transceivers,
       ice: `${ufrag(pc.localDescription)}->${ufrag(pc.remoteDescription)}`,
       signaling: pc.signalingState,

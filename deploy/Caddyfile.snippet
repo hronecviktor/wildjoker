@@ -1,0 +1,6 @@
+# Add to /etc/caddy/Caddyfile, next to the bbl3d.0s.is block.
+wildjoker.0s.is {
+	encode zstd gzip
+	# WebSockets (/ws) go through reverse_proxy as they are.
+	reverse_proxy 127.0.0.1:8100
+}

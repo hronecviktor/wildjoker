@@ -46,3 +46,12 @@ with `--network host`, installs the `playwright` Python package once into
 - leaving and rejoining voice reconnects;
 - after the game socket drops and resumes, the player is back in voice by
   itself and audio flows again.
+
+`./run_browser_test.sh --relay` forces all audio through TURN
+(`iceTransportPolicy: "relay"`, the page's `?relay` option) and checks that
+every connection uses a relay candidate. It needs a TURN server and the
+backend configured for it, e.g. coturn with `deploy/turnserver.conf` on
+`127.0.0.1:13478` (with `allow-loopback-peers` and the `127.0.0.0` denial
+removed, for local testing only) and the backend started with
+`WILDJOKER_TURN_URLS="turn:127.0.0.1:13478?transport=udp"
+WILDJOKER_TURN_SECRET=<its static-auth-secret>`.

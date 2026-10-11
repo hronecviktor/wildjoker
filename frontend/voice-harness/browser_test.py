@@ -18,7 +18,9 @@ from playwright.sync_api import Page, sync_playwright
 
 from make_speech_wav import main as make_speech_wav
 
-URL = sys.argv[1] if len(sys.argv) > 1 else "http://127.0.0.1:8103"
+URL = next((a for a in sys.argv[1:] if not a.startswith("--")), "http://127.0.0.1:8103")
+# --relay: force all audio through the TURN server the backend hands out.
+RELAY = "--relay" in sys.argv
 SPEECH = Path(tempfile.gettempdir()) / "wildjoker-speech.wav"
 FLAGS = [
     "--use-fake-ui-for-media-stream",
@@ -54,7 +56,7 @@ def main() -> None:
             context = browser.new_context(permissions=["microphone"])
             page = context.new_page()
             page.on("console", lambda m, i=i: m.type in ("error", "warning") and print(f"[{i}]", m.text))
-            page.goto(URL)
+            page.goto(URL + ("/?relay" if RELAY else ""))
             page.fill("#name", f"P{i}")
             pages.append(page)
 
@@ -87,6 +89,10 @@ def main() -> None:
         before = [stats(page) for page in pages]
         time.sleep(2)
         after = [stats(page) for page in pages]
+        if RELAY:
+            kinds = {s["candidate"] for page in pages for s in stats(page)}
+            print("selected candidate types:", kinds)
+            assert kinds == {"relay"}, kinds
         problems = []
         for i, (b, a) in enumerate(zip(before, after, strict=True)):
             grown = [y["bytes"] - x["bytes"] for x, y in zip(b, a, strict=True)]
