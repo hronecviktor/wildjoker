@@ -208,21 +208,21 @@ package; on macOS `brew install coturn`):
 turnutils_stunclient wildjoker.0s.is     # prints your public IP as "UDP reflexive addr"
 ```
 
-**Check TURN in a browser** with the Trickle ICE page. First make a
+**Check TURN.** First make a
 credential on the server, the same way the game does:
 
 ```bash
 SECRET=$(grep ^static-auth-secret= /etc/turnserver.conf | cut -d= -f2)
-USER="$(( $(date +%s) + 3600 )):test"
-PASS=$(printf %s "$USER" | openssl dgst -binary -sha1 -hmac "$SECRET" | base64)
-echo "username: $USER"; echo "password: $PASS"
+TURN_USER="$(( $(date +%s) + 3600 )):test"
+PASS=$(printf %s "$TURN_USER" | openssl dgst -binary -sha1 -hmac "$SECRET" | base64)
+echo "username: $TURN_USER"; echo "password: $PASS"
 ```
 
 A quick test on the server itself: relay a few packets between two TURN
 allocations.
 
 ```bash
-turnutils_uclient -y -n 5 -u "$USER" -w "$PASS" wildjoker.0s.is
+turnutils_uclient -y -n 5 -u "$TURN_USER" -w "$PASS" wildjoker.0s.is
 ```
 
 It ends with `Total lost packets 0`. `Cannot complete Allocation` means
