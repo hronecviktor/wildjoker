@@ -3,7 +3,7 @@
   // the host's controls (options, CPU players, kick, start).
   import { t, tn } from "../i18n/index.svelte";
   import { CPU_LEVELS, type CpuLevel, type StateMessage } from "../lib/protocol";
-  import { act, conn, voice } from "../lib/session.svelte";
+  import { act, conn, leaveRoom, voice } from "../lib/session.svelte";
   import { toast } from "../lib/toasts.svelte";
   import LangPicker from "./LangPicker.svelte";
   import VoiceControls from "./VoiceControls.svelte";
@@ -36,7 +36,6 @@
   }
 
   const setOptions = (decks: number, hand_size: number) => send({ type: "set_options", decks, hand_size });
-  const leave = () => act(() => conn.leave()).then(() => history.replaceState(null, "", "/"));
 </script>
 
 <main class="lobby">
@@ -160,7 +159,7 @@
   </section>
 
   <footer class="actions">
-    <button type="button" class="btn" onclick={leave}>{t("lobby.leave")}</button>
+    <button type="button" class="btn" onclick={leaveRoom}>{t("lobby.leave")}</button>
     {#if isHost}
       <button
         type="button"

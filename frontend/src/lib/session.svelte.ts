@@ -1,27 +1,18 @@
 // The app's single connection and voice controller, wired together.
 
-import { get } from "svelte/store";
 import { errorText, t } from "../i18n/index.svelte";
 import { Connection, ServerError } from "./connection.svelte";
 import { load, save } from "./storage";
 import { toast } from "./toasts.svelte";
-import { createVoice } from "./voice";
+import { createVoice, VoiceError } from "./voice";
 
 export const conn = new Connection();
 export const voice = createVoice(conn.send);
 
-/** Whether the player wants to be in voice and muted; kept across reconnects. */
+/** Whether the player is in voice and muted. The voice module itself rejoins after a reconnect. */
 export const voicePrefs = $state({ wanted: false, muted: load("muted", false) });
 
 conn.onSignal = (s) => voice.handleSignal(s.from, s.data);
-
-conn.onDropped = () => {
-  if (voicePrefs.wanted) voice.leave();
-};
-
-conn.onJoined = () => {
-  if (voicePrefs.wanted) void joinVoice();
-};
 
 conn.onEvent = (e) => {
   const name = (id?: string) => conn.state?.players.find((p) => p.id === id)?.name ?? "?";
@@ -33,6 +24,7 @@ conn.onEvent = (e) => {
       break;
     }
     case "kicked":
+      stopVoice();
       conn.forget();
       history.replaceState(null, "", "/");
       toast(t("event.kicked"), "error", 6000);
@@ -43,6 +35,7 @@ conn.onEvent = (e) => {
 };
 
 conn.onLost = (_code, error) => {
+  stopVoice();
   history.replaceState(null, "", "/");
   toast(errorText(error), "error", 6000);
 };
@@ -50,12 +43,26 @@ conn.onLost = (_code, error) => {
 export async function joinVoice(): Promise<void> {
   voicePrefs.wanted = true;
   try {
+    voice.setMuted(voicePrefs.muted); // kept by the module through the join
     await voice.join();
-    if (voicePrefs.muted) voice.setMuted(true);
   } catch (e) {
     voicePrefs.wanted = false;
-    toast(t("voice.failed", { reason: e instanceof Error ? e.message : String(e) }), "error");
+    const code = e instanceof VoiceError ? e.code : "failed";
+    toast(t(`voice.error.${code}`), "error", 6000);
   }
+}
+
+/** Leave voice when leaving the room (left, kicked, room gone). */
+function stopVoice(): void {
+  if (voicePrefs.wanted || inVoice()) voice.leave();
+  voicePrefs.wanted = false;
+}
+
+/** Leave the room for good, and voice with it. */
+export async function leaveRoom(): Promise<void> {
+  stopVoice();
+  await act(() => conn.leave());
+  history.replaceState(null, "", "/");
 }
 
 export function leaveVoice(): void {
@@ -78,8 +85,6 @@ export function toggleMute(): void {
 export function inVoice(): boolean {
   return !!conn.state?.players.find((p) => p.id === conn.you)?.voice;
 }
-
-export const isSpeaking = (id: string) => get(voice.speaking).has(id);
 
 /** Run a request, showing a translated toast for server errors. */
 export async function act<T>(fn: () => Promise<T>): Promise<T | undefined> {

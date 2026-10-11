@@ -9,6 +9,7 @@
   import { sessions } from "./lib/storage";
   import { dismiss, toast, toasts } from "./lib/toasts.svelte";
 
+  const playbackBlocked = voice.playbackBlocked;
   const parseInvite = () => /^\/j\/([A-Za-z]{4})\/?$/.exec(location.pathname)?.[1].toUpperCase() ?? null;
 
   let invite = $state(parseInvite());
@@ -82,6 +83,11 @@
   </div>
 {/if}
 
+{#if $playbackBlocked}
+  <!-- The voice module resumes audio on the next click or key press anywhere. -->
+  <button type="button" class="playback" data-testid="playback-blocked">🔈 {t("voice.tap_to_hear")}</button>
+{/if}
+
 <div class="toasts" aria-live="polite">
   {#each toasts as toast (toast.id)}
     <button type="button" class="toast {toast.kind}" onclick={() => dismiss(toast.id)}>{toast.text}</button>
@@ -138,6 +144,22 @@
     border-radius: 14px;
     background: #1b2a43;
     text-align: center;
+  }
+  .playback {
+    position: fixed;
+    left: 50%;
+    bottom: 16px;
+    z-index: 220;
+    transform: translateX(-50%);
+    min-height: 44px;
+    padding: 0 16px;
+    border: 0;
+    border-radius: 999px;
+    background: #2f6fe4;
+    color: #fff;
+    font: inherit;
+    font-weight: 600;
+    box-shadow: 0 4px 14px rgb(0 0 0 / 0.45);
   }
   .toasts {
     position: fixed;

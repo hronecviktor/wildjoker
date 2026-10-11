@@ -113,11 +113,15 @@ export class GameController {
     this.selected = [];
   }
 
+  /** Draws don't take the busy lock, so quick repeated draws all go through. */
   async draw(): Promise<void> {
     if (!this.active) return;
-    await this.run(async () => {
+    try {
       await this.conn.request({ type: "draw" });
-    });
+    } catch (e) {
+      if (!(e instanceof ServerError)) throw e;
+      toast(errorText(e.code), "error");
+    }
   }
 
   async open(): Promise<void> {

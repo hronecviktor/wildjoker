@@ -22,7 +22,7 @@ server=""
 if ! curl -sf "http://127.0.0.1:$PORT/healthz" >/dev/null; then
   (cd backend && uv run python -m wildjoker.server --port "$PORT" >/tmp/wildjoker-e2e-server.log 2>&1) &
   server=$!
-  trap 'pkill -P $server 2>/dev/null; kill $server 2>/dev/null || true' EXIT
+  trap 'pkill -P $server 2>/dev/null; kill $server 2>/dev/null; wait $server 2>/dev/null || true' EXIT
   for _ in $(seq 50); do curl -sf "http://127.0.0.1:$PORT/healthz" >/dev/null && break; sleep 0.2; done
 fi
 
