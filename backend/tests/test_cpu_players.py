@@ -4,7 +4,8 @@ import logging
 
 import pytest
 
-from wildjoker.cpu import EXPERT, LEVELS, CpuPlayers
+from wildjoker.cpu import EASY, EXPERT, LEVELS, CpuPlayers
+from wildjoker.cpu.player import STUCK_REACTIONS
 from wildjoker.cpu.simulate import InlineExecutor, VirtualTimeLoop, run
 from wildjoker.server import protocol as p
 from wildjoker.server.rooms import Room, Seat, Settings
@@ -136,6 +137,20 @@ def test_cpu_votes_for_a_draw_when_stuck():
         assert t.room.phase == "finished" and t.game.places == [["h", "c"]]
         await asyncio.sleep(1)
         assert t.cpus.players == {}
+        await t.close()
+
+    virtual(main())
+
+
+def test_stuck_cpu_finds_a_hard_move_late_instead_of_voting():
+    async def main():
+        # Easy can't see that 7D fits by taking 7S and 7H off two runs.
+        runs = ["4S 5S 6S 7S", "7H 8H 9H TH"]
+        t = Table("easy", {"h": "KS", "c": "7D 2C"}, table=runs)
+        await t.until(lambda: t.hand() == "2C")
+        assert t.loop.time() - t.start >= STUCK_REACTIONS * EASY.speed.reaction[1]
+        assert "c" not in t.game.draw_votes
+        await t.until(lambda: "c" in t.game.draw_votes)  # now it's really stuck
         await t.close()
 
     virtual(main())

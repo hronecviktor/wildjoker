@@ -25,7 +25,7 @@ from typing import TYPE_CHECKING, Any
 
 from ..engine import Card, GameError
 from ..server import protocol as p
-from .levels import LEVELS, Level
+from .levels import EXPERT, LEVELS, Level, Moves
 from .moves import Move, Search, find_moves, openings
 
 if TYPE_CHECKING:
@@ -33,11 +33,17 @@ if TYPE_CHECKING:
 
 log = logging.getLogger(__name__)
 
+FULL_SEARCH = EXPERT.moves
+
 RunBlocking = Callable[..., Awaitable[Any]]
 # Hands this small don't hold anything back.
 CLOSE_TO_OUT = 5
 # Racing CPUs react and think this much faster.
 RACE_FACTOR = 0.5
+# Once the deck is empty, a CPU whose own search finds nothing searches the
+# whole table before voting for a draw. If that finds a move, it plays it
+# after this many of its (slowest) reaction times: it took a while to spot.
+STUCK_REACTIONS = 3
 
 
 @dataclass
@@ -75,6 +81,7 @@ class CpuPlayer:
         self._next_draw = 0.0
         self._staging = False
         self._racing = False
+        self._stuck_since: float | None = None
         self._first_seen: dict[tuple, float] = {}  # private moves held back
         self._cache: dict[tuple, Search] = {}
 
@@ -153,9 +160,34 @@ class CpuPlayer:
             pass  # a held move sets its own deadline
         elif await self._blocked(hand, game["table"], deck):
             pass  # wait for the pile it wants instead of drawing
+        elif not deck and await self._stuck(hand, piles, noticed):
+            pass  # it plays a move it was slow to spot instead of voting
         else:
             can_shed = any(m.shed > 0 for m in moves)
             self._idle(deck, can_shed=can_shed, voted=self.pid in game["draw_votes"])
+
+    async def _stuck(self, hand: list[int], piles: tuple, noticed: float) -> bool:
+        """With the deck empty, whether the full search finds a shedding move.
+
+        The move is played once the CPU has been stuck for a while; until
+        then it waits (and doesn't vote for a draw).
+        """
+        if self.level.moves.kind == "full":
+            return False  # its own search was the full one
+        search = await self._search(hand, piles, 1.0, FULL_SEARCH)
+        moves = [m for m in search.moves if m.shed > 0]
+        if not moves:
+            return False
+        now = self._now()
+        if self._stuck_since is None:
+            self._stuck_since = now
+        due = self._stuck_since + STUCK_REACTIONS * self.level.speed.reaction[1] / self.speed
+        if now < due:
+            self._deadline = due
+        else:
+            self._stuck_since = None
+            await self._play(max(moves, key=lambda m: (m.shed, -len(m.stage))), noticed)
+        return True
 
     async def _blocked(self, hand: list[int], table: list[dict], deck: int) -> bool:
         """Whether a pile someone else is staging would give it a move."""
@@ -204,11 +236,14 @@ class CpuPlayer:
             return 1.0  # nothing to save jokers for
         return self.level.smarts.joker_weight
 
-    async def _search(self, hand: list[int], piles: tuple, joker_weight: float) -> Search:
-        key = (tuple(hand), piles, joker_weight)
+    async def _search(
+        self, hand: list[int], piles: tuple, joker_weight: float, moves: Moves | None = None
+    ) -> Search:
+        moves = moves or self.level.moves
+        key = (tuple(hand), piles, joker_weight, moves)
         if key in self._cache:
             return self._cache[key]
-        search = await self.run_blocking(find_moves, hand, piles, self.level.moves, joker_weight)
+        search = await self.run_blocking(find_moves, hand, piles, moves, joker_weight)
         self.stats.search_seconds.append(search.seconds)
         self.stats.solves.append(search.solves)
         if len(self._cache) >= 4:
