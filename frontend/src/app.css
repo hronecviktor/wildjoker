@@ -1,0 +1,134 @@
+:root {
+  --bg: #0f1a2c;
+  --panel: #18253c;
+  --muted: #a9b6cc;
+  --accent: #2f6fe4;
+  color-scheme: dark;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-size: 16px;
+  line-height: 1.35;
+  color: #f2f5fa;
+  background: var(--bg);
+  -webkit-text-size-adjust: 100%;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100dvh;
+  background: var(--bg);
+  overscroll-behavior: none;
+}
+
+#app {
+  display: flex;
+  min-height: 100dvh;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid rgb(255 255 255 / 0.2);
+  border-radius: 10px;
+  background: #22304a;
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+.btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+.btn.primary {
+  border-color: transparent;
+  background: var(--accent);
+  color: #fff;
+}
+.btn.big {
+  min-height: 52px;
+  font-size: 18px;
+}
+.btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 8px;
+  border: 1px solid rgb(255 255 255 / 0.18);
+  border-radius: 10px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 18px;
+  font-weight: 700;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.icon-btn .label {
+  font-size: 14px;
+}
+.icon-btn.on {
+  background: #1f5136;
+  border-color: #3f9e64;
+}
+.icon-btn.warn {
+  background: #5c1d22;
+  border-color: #e5484d;
+}
+.icon-btn.danger {
+  color: #ff9ca1;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 14px;
+  color: var(--muted);
+}
+.field input {
+  min-height: 48px;
+  padding: 0 12px;
+  border: 1px solid rgb(255 255 255 / 0.25);
+  border-radius: 10px;
+  background: #0f1a2c;
+  color: #fff;
+  font: inherit;
+  font-size: 18px;
+}
+
+:focus-visible {
+  outline: 3px solid #39a0ff;
+  outline-offset: 2px;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+@media (max-width: 380px) {
+  .icon-btn .label {
+    display: none;
+  }
+}
