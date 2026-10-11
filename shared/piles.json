@@ -1,0 +1,33 @@
+{
+  "description": "Pile validation cases shared by the backend and frontend. 'cards' are card codes in any order (repeated codes come from different decks). For valid piles, 'kind' and 'order' give the canonical arrangement; 'opening' says whether the cards are a valid opening.",
+  "cases": [
+    {"name": "simple run", "cards": "3H AH 2H", "valid": true, "kind": "run", "order": "AH 2H 3H", "opening": true},
+    {"name": "long run", "cards": "5S 6S 7S 8S 9S TS JS", "valid": true, "kind": "run", "order": "5S 6S 7S 8S 9S TS JS", "opening": true},
+    {"name": "ace high", "cards": "KD AD QD", "valid": true, "kind": "run", "order": "QD KD AD", "opening": true},
+    {"name": "full run ace low", "cards": "AC 2C 3C 4C 5C 6C 7C 8C 9C TC JC QC KC", "valid": true, "kind": "run", "order": "AC 2C 3C 4C 5C 6C 7C 8C 9C TC JC QC KC", "opening": true},
+    {"name": "no wrap around", "cards": "KH AH 2H", "valid": false},
+    {"name": "fourteen cards", "cards": "AC 2C 3C 4C 5C 6C 7C 8C 9C TC JC QC KC JK", "valid": false},
+    {"name": "two cards", "cards": "4H 5H", "valid": false},
+    {"name": "mixed suits", "cards": "4H 5S 6H", "valid": false},
+    {"name": "gap", "cards": "4H 5H 7H", "valid": false},
+    {"name": "duplicate in run", "cards": "4H 5H 5H 6H", "valid": false},
+    {"name": "joker fills gap", "cards": "4H JK 6H", "valid": true, "kind": "run", "order": "4H JK 6H", "opening": false},
+    {"name": "joker extends top", "cards": "4H 5H JK", "valid": true, "kind": "run", "order": "4H 5H JK", "opening": false},
+    {"name": "joker extends bottom after high ace", "cards": "KH AH JK", "valid": true, "kind": "run", "order": "JK KH AH", "opening": false},
+    {"name": "jokers top then bottom", "cards": "KS JK JK", "valid": true, "kind": "run", "order": "JK KS JK", "opening": false},
+    {"name": "ace low with jokers", "cards": "AS JK JK", "valid": true, "kind": "run", "order": "AS JK JK", "opening": false},
+    {"name": "three jokers", "cards": "JK JK JK", "valid": true, "kind": "run", "order": "JK JK JK", "opening": false},
+    {"name": "five jokers", "cards": "JK JK JK JK JK", "valid": true, "kind": "run", "order": "JK JK JK JK JK", "opening": false},
+    {"name": "run too wide for jokers", "cards": "2H JK 6H", "valid": false},
+    {"name": "set of three", "cards": "QH QS QD", "valid": true, "kind": "set", "order": "QS QH QD", "opening": false},
+    {"name": "set of four", "cards": "7C 7D 7H 7S", "valid": true, "kind": "set", "order": "7S 7H 7D 7C", "opening": false},
+    {"name": "set of five", "cards": "7C 7D 7H 7S JK", "valid": false},
+    {"name": "set with same card twice", "cards": "QH QH QS", "valid": false},
+    {"name": "set with joker", "cards": "9D JK 9S", "valid": true, "kind": "set", "order": "9S 9D JK", "opening": false},
+    {"name": "set of three with two jokers in a set-like pile", "cards": "9D 9S JK JK", "valid": true, "kind": "set", "order": "9S 9D JK JK", "opening": false},
+    {"name": "set mixed ranks", "cards": "9D 8S 9H", "valid": false},
+    {"name": "one natural and jokers is a run", "cards": "JK 5H JK", "valid": true, "kind": "run", "order": "5H JK JK", "opening": false},
+    {"name": "ace high long", "cards": "TS JS QS KS AS", "valid": true, "kind": "run", "order": "TS JS QS KS AS", "opening": true},
+    {"name": "ace both ends", "cards": "AS 2S 3S 4S 5S 6S 7S 8S 9S TS JS QS KS AS", "valid": false}
+  ]
+}
