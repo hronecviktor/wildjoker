@@ -2,6 +2,7 @@
   // The lobby: invite link and code, the players filling up live, voice, and
   // the host's controls (options, CPU players, kick, start).
   import { t, tn } from "../i18n/index.svelte";
+  import { copyText } from "../lib/clipboard";
   import { CPU_LEVELS, type CpuLevel, type StateMessage } from "../lib/protocol";
   import { act, conn, leaveRoom, voice } from "../lib/session.svelte";
   import { toast } from "../lib/toasts.svelte";
@@ -19,12 +20,8 @@
   const send = (msg: { type: string; [key: string]: unknown }) => act(() => conn.request(msg));
 
   async function copy() {
-    try {
-      await navigator.clipboard.writeText(link);
-      toast(t("lobby.copied"));
-    } catch {
-      toast(t("lobby.copy_failed"), "error");
-    }
+    if (await copyText(link)) toast(t("lobby.copied"));
+    else toast(t("lobby.copy_failed"), "error");
   }
 
   async function share() {
