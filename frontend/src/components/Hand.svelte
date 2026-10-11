@@ -8,11 +8,13 @@
     cards: number[];
     selected: number[];
     borrowed: Set<number>;
+    /** Cards just drawn, to highlight. */
+    fresh?: Set<number>;
     ontoggle: (card: number) => void;
     /** Tapping the empty part of the hand (puts selected pile cards back). */
     onplace?: () => void;
   }
-  let { cards, selected, borrowed, ontoggle, onplace }: Props = $props();
+  let { cards, selected, borrowed, fresh = new Set(), ontoggle, onplace }: Props = $props();
 
   const MIN_STEP = 44;
   const ROW_STEP = 50;
@@ -61,9 +63,13 @@
       nav="hand"
       selected={selected.includes(card)}
       borrowed={borrowed.has(card)}
+      fresh={fresh.has(card)}
       onclick={() => ontoggle(card)}
-      style="position:absolute;left:{layout.offset + col * layout.step}px;top:{TOP + row * ROW_STEP}px;z-index:{i +
-        1}"
+      style="position:absolute;left:{layout.offset + col * layout.step}px;top:{TOP + row * ROW_STEP}px;z-index:{fresh.has(
+        card,
+      )
+        ? 40
+        : i + 1}"
     />
   {:else}
     <p class="empty">{t("hand.empty")}</p>

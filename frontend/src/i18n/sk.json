@@ -98,6 +98,7 @@
   "table.empty": "Na stole ešte nič nie je.",
   "table.locked_by": "Túto kôpku práve používa {name}",
   "table.in_staging": "V tvojom ťahu",
+  "table.you": "Ty",
 
   "hand.label_one": "Tvoje karty, {n} karta",
   "hand.label_few": "Tvoje karty, {n} karty",

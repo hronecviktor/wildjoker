@@ -5,10 +5,14 @@ import { errorText, t } from "../i18n/index.svelte";
 import { sortCards, type SortMode } from "./cards";
 import { ServerError, type Connection } from "./connection.svelte";
 import * as D from "./draft";
+import { diff, type Snapshot } from "./changes";
 import { arrange, isValidOpening } from "./piles";
 import type { TablePile } from "./protocol";
 import { load, save } from "./storage";
 import { toast } from "./toasts.svelte";
+
+/** How long new cards stay highlighted; matches the animations in Card and TablePile. */
+const FRESH_MS = 3000;
 
 export class GameController {
   draft = $state.raw<D.Draft>(D.emptyDraft());
@@ -17,6 +21,12 @@ export class GameController {
   /** When the staging area expires, as a performance.now() timestamp. */
   deadline = $state<number | null>(null);
   busy = $state(false);
+  /** Cards that just arrived in the hand or on the table, flashed for a few seconds. */
+  freshHand = $state.raw<Set<number>>(new Set());
+  freshTable = $state.raw<Set<number>>(new Set());
+  /** Piles that just changed, with the name of who changed them (if known). */
+  changedPiles = $state.raw<Map<number, string | null>>(new Map());
+  private last: Snapshot | null = null;
 
   constructor(private conn: Connection) {}
 
@@ -122,6 +132,38 @@ export class GameController {
       if (!(e instanceof ServerError)) throw e;
       toast(errorText(e.code), "error");
     }
+  }
+
+  /** Compare a new state with the previous one and flash what changed. */
+  observe(): void {
+    const state = this.state;
+    const game = state?.game;
+    if (!state || !game) {
+      this.last = null;
+      return;
+    }
+    const now: Snapshot = {
+      table: game.table,
+      hand: game.hand,
+      counts: Object.fromEntries(state.players.map((p) => [p.id, p.cards ?? 0])),
+    };
+    const before = this.last;
+    this.last = now;
+    if (!before) return; // first state of a game, or after a reload: nothing is "new"
+    const changes = diff(before, now);
+    const name = (id: string | null) =>
+      id === null ? null : id === this.conn.you ? t("table.you") : (state.players.find((p) => p.id === id)?.name ?? null);
+    const piles = new Map([...changes.piles].map(([pile, who]) => [pile, name(who)] as const));
+    if (!changes.hand.size && !changes.table.size && !piles.size) return;
+
+    this.freshHand = new Set([...this.freshHand, ...changes.hand]);
+    this.freshTable = new Set([...this.freshTable, ...changes.table]);
+    this.changedPiles = new Map([...this.changedPiles, ...piles]);
+    setTimeout(() => {
+      this.freshHand = new Set([...this.freshHand].filter((c) => !changes.hand.has(c)));
+      this.freshTable = new Set([...this.freshTable].filter((c) => !changes.table.has(c)));
+      this.changedPiles = new Map([...this.changedPiles].filter(([p]) => !piles.has(p)));
+    }, FRESH_MS);
   }
 
   async open(): Promise<void> {

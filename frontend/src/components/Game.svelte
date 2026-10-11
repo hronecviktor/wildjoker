@@ -18,7 +18,10 @@
   const game = new GameController(conn);
   $effect(() => {
     void conn.state;
-    untrack(() => game.sync());
+    untrack(() => {
+      game.sync();
+      game.observe();
+    });
   });
 
   let help = $state(false);
@@ -141,6 +144,9 @@
         {pile}
         lockedBy={nameOf(pile.locked_by)}
         mine={pile.locked_by === room.you}
+        fresh={game.freshTable}
+        changed={game.changedPiles.has(pile.id)}
+        changedBy={game.changedPiles.get(pile.id) ?? null}
         disabled={!game.active || !game.opened}
         onclick={() => game.take(pile)}
       />
@@ -218,6 +224,7 @@
       cards={game.hand}
       selected={game.selected}
       borrowed={game.fromTable}
+      fresh={game.freshHand}
       ontoggle={(c) => game.toggle(c)}
       onplace={() => game.place({ kind: "hand" })}
     />

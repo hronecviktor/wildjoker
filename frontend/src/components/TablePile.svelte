@@ -12,9 +12,23 @@
     lockedBy: string | null;
     mine: boolean;
     disabled: boolean;
+    /** Cards that just arrived on the table (flashed). */
+    fresh?: Set<number>;
+    /** The pile just changed; ``changedBy`` names who changed it, if known. */
+    changed?: boolean;
+    changedBy?: string | null;
     onclick: () => void;
   }
-  let { pile, lockedBy, mine, disabled, onclick }: Props = $props();
+  let {
+    pile,
+    lockedBy,
+    mine,
+    disabled,
+    fresh = new Set(),
+    changed = false,
+    changedBy = null,
+    onclick,
+  }: Props = $props();
 
   const cards = $derived(withValues(pile.cards));
   const label = $derived(
@@ -28,6 +42,7 @@
   class="pile"
   class:locked={!!lockedBy && !mine}
   class:mine
+  class:changed
   data-nav="table"
   data-pile={pile.id}
   aria-label={label}
@@ -36,13 +51,16 @@
 >
   <span class="cards">
     {#each cards as c (c.id)}
-      <Card id={c.id} value={c.value} size="pile" />
+      <Card id={c.id} value={c.value} size="pile" fresh={fresh.has(c.id)} />
     {/each}
   </span>
   {#if lockedBy && !mine}
     <span class="who">🔒 {lockedBy}</span>
   {:else if mine}
     <span class="who mine">{t("table.in_staging")}</span>
+  {/if}
+  {#if changed && changedBy && !lockedBy}
+    <span class="who changed-by">{changedBy}</span>
   {/if}
 </button>
 
@@ -63,6 +81,27 @@
   }
   .cards {
     display: flex;
+  }
+  /* Just changed: the outline pulses green and fades (3 s, see FRESH_MS). */
+  .changed {
+    animation: changed 3s ease-out forwards;
+  }
+  @keyframes changed {
+    0%,
+    60% {
+      border-color: #2fe07a;
+      box-shadow: 0 0 0 2px #2fe07a, 0 0 18px 2px rgb(47 224 122 / 0.6);
+    }
+    100% {
+      border-color: rgb(255 255 255 / 0.12);
+      box-shadow: none;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .changed {
+      animation: none;
+      border-color: #2fe07a;
+    }
   }
   .cards > :global(*:not(:first-child)) {
     margin-left: -20px;
@@ -92,6 +131,24 @@
   }
   .who.mine {
     background: #2958c9;
+  }
+  .who.changed-by {
+    z-index: 5; /* above flashing cards, which lift */
+    top: 0;
+    left: 8px;
+    transform: translateY(-60%);
+    background: #1f9d57;
+    font-size: 12px;
+    animation: fade-out 3s ease-in forwards;
+  }
+  @keyframes fade-out {
+    0%,
+    75% {
+      opacity: 1;
+    }
+    100% {
+      opacity: 0;
+    }
   }
   .pile:focus-visible {
     outline: 3px solid #39a0ff;

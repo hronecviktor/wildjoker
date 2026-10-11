@@ -98,6 +98,7 @@
   "table.empty": "No piles on the table yet.",
   "table.locked_by": "{name} is using this pile",
   "table.in_staging": "In your move",
+  "table.you": "You",
 
   "hand.label_one": "Your hand, {n} card",
   "hand.label_few": "Your hand, {n} cards",

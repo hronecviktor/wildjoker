@@ -12,11 +12,23 @@
     value?: JokerValue | null;
     /** Marks a card that came from a table pile. */
     borrowed?: boolean;
+    /** A card just drawn: flashes so it's easy to spot in the hand. */
+    fresh?: boolean;
     onclick?: (e: MouseEvent) => void;
     nav?: string;
     style?: string;
   }
-  let { id, size = "hand", selected = false, value = null, borrowed = false, onclick, nav, style }: Props =
+  let {
+    id,
+    size = "hand",
+    selected = false,
+    value = null,
+    borrowed = false,
+    fresh = false,
+    onclick,
+    nav,
+    style,
+  }: Props =
     $props();
 
   const joker = $derived(isJoker(id));
@@ -49,6 +61,7 @@
     class:joker
     class:selected
     class:borrowed
+    class:fresh
     data-suit={suit ?? "j"}
     data-nav={nav}
     data-card={id}
@@ -62,6 +75,7 @@
     class="card {size}"
     class:joker
     class:borrowed
+    class:fresh
     data-suit={suit ?? "j"}
     data-card={id}
     role="img"
@@ -183,6 +197,43 @@
     box-shadow:
       0 0 0 3px #f5b301,
       0 6px 10px rgb(0 0 0 / 0.35);
+  }
+  /* A card just drawn: a green glow that pulses, then fades (3 s, see FRESH_MS). */
+  .fresh {
+    z-index: 3;
+    border-color: #2fe07a;
+    animation: fresh 3s ease-out forwards;
+  }
+  .fresh.selected {
+    border-color: #f5b301;
+  }
+  @keyframes fresh {
+    0%,
+    30%,
+    60% {
+      transform: translateY(-14px) scale(1.08);
+      box-shadow:
+        0 0 0 4px #2fe07a,
+        0 0 22px 6px rgb(47 224 122 / 0.85);
+    }
+    15%,
+    45%,
+    75% {
+      transform: translateY(-6px) scale(1);
+      box-shadow:
+        0 0 0 3px #2fe07a,
+        0 0 8px 2px rgb(47 224 122 / 0.5);
+    }
+    100% {
+      transform: none;
+      box-shadow: 0 0 0 2px rgb(47 224 122 / 0);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .fresh {
+      animation: none;
+      box-shadow: 0 0 0 4px #2fe07a;
+    }
   }
   .check {
     position: absolute;
