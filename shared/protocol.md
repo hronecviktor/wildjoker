@@ -78,8 +78,10 @@ pile rules (`shared/piles.json`). The server checks everything again.
 
 Connections are set up with WebRTC "perfect negotiation" (see
 `frontend/src/lib/voice/`): whenever two players are both in voice, both
-sides create a connection and may send offers; on a collision the player
-with the smaller id is *polite* and rolls its own offer back. The `data` the
+sides create a connection. The player with the larger id sends the first
+offer (the other one only offers itself if none comes within 3 s); later
+offers may come from either side, and on a collision the player with the
+smaller id is *polite* and rolls its own offer back. The `data` the
 voice module sends is `{"sid": "<session id>", "description": {...}}` or
 `{"sid": "...", "candidate": {...}}`; `sid` is new each time a player joins
 voice, so a peer that rejoined is recognised and gets a fresh connection.

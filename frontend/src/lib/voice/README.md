@@ -54,8 +54,11 @@ const { speaking, playbackBlocked } = voice;
   re-joining after a socket reconnect, TURN credential refresh, speaking
   detection and playback.
 - `peer.ts`: one `RTCPeerConnection` with the perfect negotiation pattern.
-  Both sides add their track and may offer; when offers cross, the player
-  with the smaller id is polite and rolls back. Every signal carries the
+  The player with the smaller id is polite: it waits for the other side's
+  first offer (up to 3 s) and sends its audio in the answer, because when
+  first offers cross Chromium sometimes never starts ICE on the side that
+  rolled back. After that either side may offer (ICE restarts), and
+  crossing offers are resolved by the polite side rolling back. Every signal carries the
   sender's connection id (`sid`) and, once known, the receiver's (`to`), so
   signals for a closed connection are dropped and a peer that rejoined gets
   a fresh connection. A failed connection first tries an ICE restart; if it
