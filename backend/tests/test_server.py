@@ -304,7 +304,10 @@ def test_full_game_flow(http, connect):
         c.wait(lambda c: c.state["phase"] == "finished")
     assert host.state["game"]["places"] == [[host.you], [other.you]]
     assert host.player(host.you)["place"] == 1
-    assert any(e["kind"] == "went_out" for e in other.events)
+    # Only the player who ran out of cards is announced, with their place
+    # (the other finishes last but didn't go out).
+    went_out = [e for e in other.events if e["kind"] == "went_out"]
+    assert went_out == [{"type": "event", "kind": "went_out", "player": host.you, "place": 1}]
     host.ok("back_to_lobby")
     other.wait(lambda c: c.state["phase"] == "lobby" and c.state["game"] is None)
 

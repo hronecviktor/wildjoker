@@ -18,7 +18,9 @@ conn.onEvent = (e) => {
   const name = (id?: string) => conn.state?.players.find((p) => p.id === id)?.name ?? "?";
   switch (e.kind) {
     case "went_out": {
-      const place = conn.state?.players.find((p) => p.id === e.player)?.place;
+      // The event arrives before the state that records the place, so it
+      // carries the place itself.
+      const place = e.place ?? conn.state?.players.find((p) => p.id === e.player)?.place;
       const you = e.player === conn.you;
       toast(you ? t("event.went_out_you") : t("event.went_out", { name: name(e.player), place: place ?? "" }));
       break;

@@ -105,6 +105,8 @@ export interface EventMessage {
   type: "event";
   kind: EventKind;
   player?: string;
+  /** went_out: the player's finishing place (1-based). */
+  place?: number;
 }
 
 export interface SignalMessage {

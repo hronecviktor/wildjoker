@@ -114,8 +114,9 @@ the client fetches new credentials before they expire.
 
 - `{"type": "ping"}`: replies `ok`; use as a keep-alive.
 - Events, for toasts and sounds: `{"type": "event", "kind": ...}` with
-  kinds `went_out` (`player`), `staging_expired` (only to the player
-  concerned), `stalemate`, `kicked`.
+  kinds `went_out` (`player`, `place`: 1-based; only for players who ran
+  out of cards, sent before the state that records it), `staging_expired`
+  (only to the player concerned), `stalemate`, `kicked`.
 
 ## State
 

@@ -218,9 +218,14 @@ class Room:
                 game.vote_draw(pid)
             case _:
                 raise GameError("bad_message")
-        for place in game.places[places:]:
+        # Players who ran out of cards, with their place. (The game ending also
+        # places whoever is left, but they didn't go out.)
+        for number, place in enumerate(game.places[places:], start=places + 1):
             for out in place:
-                self.broadcast({"type": "event", "kind": "went_out", "player": out})
+                if not game.players[out].hand:
+                    self.broadcast(
+                        {"type": "event", "kind": "went_out", "player": out, "place": number}
+                    )
         if game.status == "finished":
             self.phase = "finished"
         self.changed()
