@@ -13,6 +13,7 @@
   import ShortcutHelp from "./ShortcutHelp.svelte";
   import StagingSheet from "./StagingSheet.svelte";
   import TablePile from "./TablePile.svelte";
+  import { tableOrder } from "../lib/tableOrder";
   import VoiceControls from "./VoiceControls.svelte";
 
   const game = new GameController(conn);
@@ -33,6 +34,37 @@
   const deckEmpty = $derived(view.deck === 0);
   const voted = $derived(view.draw_votes.includes(room.you));
   const hasSelection = $derived(game.selected.length > 0);
+
+  // The table shrinks its cards (density 0-3) until every pile fits without
+  // scrolling; only if even the smallest size doesn't fit does it scroll.
+  const MAX_DENSITY = 3;
+  const piles = $derived(tableOrder(view.table));
+  let tableEl: HTMLElement | undefined = $state();
+  let density = $state(0);
+
+  function fitTable() {
+    const el = tableEl;
+    if (!el) return;
+    // Measure by setting the attribute directly (the browser lays out on
+    // read), then keep the result in state so the markup agrees.
+    let d = 0;
+    el.dataset.density = "0";
+    while (el.scrollHeight > el.clientHeight + 1 && d < MAX_DENSITY) {
+      el.dataset.density = String(++d);
+    }
+    density = d;
+  }
+
+  $effect(() => {
+    void piles; // refit when piles change...
+    fitTable();
+  });
+  $effect(() => {
+    if (!tableEl) return;
+    const observer = new ResizeObserver(() => fitTable()); // ...or the table's size does
+    observer.observe(tableEl);
+    return () => observer.disconnect();
+  });
   // Everyone still holding cards is a CPU: a human may speed them up.
   const canFastForward = $derived.by(() => {
     if (room.phase !== "playing" || !game.me || game.me.cpu !== null) return false;
@@ -151,8 +183,11 @@
 
   <PlayerStrip players={room.players} you={room.you} host={room.host} />
 
-  <section class="table" aria-label={t("table.title")} data-testid="table">
-    {#each view.table as pile (pile.id)}
+  <section class="table" aria-label={t("table.title")} data-testid="table"
+    data-density={density}
+    bind:this={tableEl}
+  >
+    {#each piles as pile (pile.id)}
       <TablePile
         {pile}
         lockedBy={nameOf(pile.locked_by)}
@@ -335,6 +370,51 @@
     border-radius: 14px;
     margin: 0 6px;
     box-shadow: inset 0 2px 12px rgb(0 0 0 / 0.35);
+  }
+  /* Denser tables: smaller pile cards that overlap more, showing the corner. */
+  .table[data-density="1"] {
+    gap: 6px;
+  }
+  .table[data-density="1"] :global(.card.pile) {
+    --w: 34px;
+    --h: 48px;
+    --corner: 12px;
+  }
+  .table[data-density="1"] :global(.pile .cards > *:not(:first-child)) {
+    margin-left: -19px;
+  }
+  .table[data-density="2"],
+  .table[data-density="3"] {
+    gap: 5px;
+    padding: 8px;
+  }
+  .table[data-density="2"] :global(.pile),
+  .table[data-density="3"] :global(.pile) {
+    padding: 4px 5px 5px;
+  }
+  .table[data-density="2"] :global(.card.pile) {
+    --w: 30px;
+    --h: 40px;
+    --corner: 11px;
+  }
+  .table[data-density="2"] :global(.pile .cards > *:not(:first-child)) {
+    margin-left: -17px;
+  }
+  .table[data-density="3"] :global(.card.pile) {
+    --w: 26px;
+    --h: 34px;
+    --corner: 10px;
+  }
+  .table[data-density="3"] :global(.pile .cards > *:not(:first-child)) {
+    margin-left: -14px;
+  }
+  .table[data-density="2"] :global(.card.pile .corner),
+  .table[data-density="3"] :global(.card.pile .corner) {
+    left: 2px;
+  }
+  .table[data-density="2"] :global(.card.pile .pip),
+  .table[data-density="3"] :global(.card.pile .pip) {
+    display: none;
   }
   .empty {
     margin: auto;

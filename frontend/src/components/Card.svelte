@@ -46,7 +46,7 @@
     {#if joker}
       <span class="sym">★</span><span class="joker-word">JOKER</span>
     {:else}
-      <span class="rank">{rank}</span><span class="sym">{symbol}</span>
+      <span class="rank" class:ten={rank === "10"}>{rank}</span><span class="sym">{symbol}</span>
     {/if}
   </span>
   <span class="pip" aria-hidden="true">{symbol}</span>
@@ -153,6 +153,12 @@
   }
   .sym {
     font-size: 0.95em;
+  }
+  /* "10" is the only two-character rank: squeeze it so it shows on tightly
+     overlapped cards. */
+  .ten {
+    letter-spacing: -0.14em;
+    margin-left: -0.08em;
   }
   .joker-word {
     margin-top: 2px;
