@@ -32,7 +32,7 @@
 {#snippet face()}
   <span class="corner">
     {#if joker}
-      <span class="rank">J</span><span class="rank">K</span>
+      <span class="sym">★</span><span class="joker-word">JOKER</span>
     {:else}
       <span class="rank">{rank}</span><span class="sym">{symbol}</span>
     {/if}
@@ -139,6 +139,14 @@
   }
   .sym {
     font-size: 0.95em;
+  }
+  .joker-word {
+    margin-top: 2px;
+    writing-mode: vertical-rl;
+    text-orientation: upright;
+    font-size: 0.5em;
+    letter-spacing: -0.12em;
+    line-height: 1;
   }
   .pip {
     position: absolute;
