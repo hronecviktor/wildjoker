@@ -35,7 +35,7 @@ export const ERROR_CODES = [
   "invalid_pile",
   "not_in_voice",
 ] as const;
-export const EVENT_KINDS = ["went_out", "staging_expired", "stalemate", "kicked"] as const;
+export const EVENT_KINDS = ["drew", "went_out", "staging_expired", "stalemate", "kicked"] as const;
 export type EventKind = (typeof EVENT_KINDS)[number];
 
 export interface PlayerView {

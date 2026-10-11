@@ -5,7 +5,7 @@ import { errorText, t } from "../i18n/index.svelte";
 import { sortCards, type SortMode } from "./cards";
 import { ServerError, type Connection } from "./connection.svelte";
 import * as D from "./draft";
-import { diff, type Snapshot } from "./changes";
+import { diff, type Changes, type Snapshot } from "./changes";
 import { arrange, isValidOpening } from "./piles";
 import type { TablePile } from "./protocol";
 import { load, save } from "./storage";
@@ -137,12 +137,12 @@ export class GameController {
   }
 
   /** Compare a new state with the previous one and flash what changed. */
-  observe(): void {
+  observe(): Changes | null {
     const state = this.state;
     const game = state?.game;
     if (!state || !game) {
       this.last = null;
-      return;
+      return null;
     }
     const now: Snapshot = {
       table: game.table,
@@ -151,12 +151,12 @@ export class GameController {
     };
     const before = this.last;
     this.last = now;
-    if (!before) return; // first state of a game, or after a reload: nothing is "new"
+    if (!before) return null; // first state of a game, or after a reload: nothing is "new"
     const changes = diff(before, now);
     const name = (id: string | null) =>
       id === null ? null : id === this.conn.you ? t("table.you") : (state.players.find((p) => p.id === id)?.name ?? null);
     const piles = new Map([...changes.piles].map(([pile, who]) => [pile, name(who)] as const));
-    if (!changes.hand.size && !changes.table.size && !piles.size) return;
+    if (!changes.hand.size && !changes.table.size && !piles.size) return changes;
 
     this.freshHand = new Set([...this.freshHand, ...changes.hand]);
     this.freshTable = new Set([...this.freshTable, ...changes.table]);
@@ -166,6 +166,7 @@ export class GameController {
       this.freshTable = new Set([...this.freshTable].filter((c) => !changes.table.has(c)));
       this.changedPiles = new Map([...this.changedPiles].filter(([p]) => !piles.has(p)));
     }, FRESH_MS);
+    return changes;
   }
 
   async open(): Promise<void> {

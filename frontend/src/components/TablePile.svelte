@@ -45,6 +45,8 @@
   class:changed
   data-nav="table"
   data-pile={pile.id}
+  data-zone={mine ? "skip" : `pile:${pile.id}`}
+  data-owner={pile.locked_by}
   aria-label={label}
   aria-disabled={disabled || (!!lockedBy && !mine)}
   {onclick}

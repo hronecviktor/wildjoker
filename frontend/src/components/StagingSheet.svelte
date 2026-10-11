@@ -54,7 +54,7 @@
     {#each game.draft.piles as pile, n (pile.key)}
       {@const valid = pileValid(pile)}
       {@const cards = valid ? withValues(pile.cards) : displayOrder(pile.cards).map((id) => ({ id, value: null }))}
-      <div class="pile" class:invalid={!valid} data-testid="draft-pile">
+      <div class="pile" class:invalid={!valid} data-testid="draft-pile" data-zone="draft:{pile.key}">
         <button
           type="button"
           class="status"

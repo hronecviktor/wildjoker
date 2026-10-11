@@ -272,6 +272,8 @@ def test_draw_updates_counts(connect):
     reply = host.ok("draw")
     assert reply["card"] in host.wait(lambda c: len(c.state["game"]["hand"]) == 6)["game"]["hand"]
     other.wait(lambda c: c.player(host.you)["cards"] == 6)
+    # Everyone hears the draw (the client plays a sound and animates it).
+    assert {"type": "event", "kind": "drew", "player": host.you} in other.events
 
 
 def test_game_errors_come_back_with_codes(connect):

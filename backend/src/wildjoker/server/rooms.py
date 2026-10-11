@@ -206,6 +206,7 @@ class Room:
         match msg:
             case p.Draw():
                 reply = {"card": game.draw(pid).id}
+                self.broadcast({"type": "event", "kind": "drew", "player": pid})
             case p.Open(cards=cards):
                 reply = {"pile": game.open(pid, cards).id}
             case p.Stage(piles=piles):

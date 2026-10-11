@@ -8,8 +8,9 @@ client can match them. Server messages are plain dicts built in ``rooms``:
 - ``state``: the full room as this player may see it, after every change
 - ``ok`` / ``error``: ``{req, code?}`` replies to a client message
 - ``signal``: ``{from, data}`` relayed WebRTC signalling
-- ``event``: ``{kind, ...}`` notable moments for toasts (``went_out``,
-  ``staging_expired``, ``stalemate``, ``kicked``)
+- ``event``: ``{kind, ...}`` notable moments for toasts, sounds and
+  animations (``drew``, ``went_out``, ``staging_expired``, ``stalemate``,
+  ``kicked``)
 """
 
 from __future__ import annotations

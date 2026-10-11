@@ -86,6 +86,7 @@ const tablePile = (v: TutorialView, code: string) => {
 };
 
 const COMMIT = '[data-testid="commit"]';
+const DECK = '[data-testid="deck"]';
 
 // -- the steps ------------------------------------------------------------------
 
@@ -105,7 +106,7 @@ export const STEPS: Step[] = [
     text: "tutorial.draw",
     allowDraw: true,
     done: (v) => has(v.hand, "6H") || onTable(v, "6H"),
-    guide: () => ({ targets: ['[data-testid="draw"]'], hint: button("draw") }),
+    guide: () => ({ targets: [DECK, '[data-testid="draw"]'], hint: { key: "tutorial.h.deck" } }),
   },
   {
     id: "open",
@@ -130,7 +131,7 @@ export const STEPS: Step[] = [
     text: "tutorial.draw_again",
     allowDraw: true,
     done: (v) => has(v.hand, "7H") || onTable(v, "7H"),
-    guide: () => ({ targets: ['[data-testid="draw"]'], hint: button("draw") }),
+    guide: () => ({ targets: [DECK, '[data-testid="draw"]'], hint: { key: "tutorial.h.deck" } }),
   },
   {
     id: "add",

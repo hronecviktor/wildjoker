@@ -31,6 +31,7 @@
       class:out={!!p.place}
       aria-label={describe(p)}
       data-testid="player"
+      data-player={p.id}
     >
       <span class="avatar" aria-hidden="true">
         {p.cpu ? "🤖" : p.name.slice(0, 1).toUpperCase()}

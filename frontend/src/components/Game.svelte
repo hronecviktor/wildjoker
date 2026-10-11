@@ -4,6 +4,8 @@
   import { untrack } from "svelte";
   import { t, tn } from "../i18n/index.svelte";
   import { GameController } from "../lib/game.svelte";
+  import * as motion from "../lib/motion";
+  import { setSound, soundOn } from "../lib/sounds";
   import { focusGroup, navigate } from "../lib/keynav";
   import { act, conn, leaveRoom, toggleMute } from "../lib/session.svelte";
   import { toast } from "../lib/toasts.svelte";
@@ -18,16 +20,23 @@
   import VoiceControls from "./VoiceControls.svelte";
 
   const game = new GameController(conn);
-  $effect(() => {
+  // Before the cards on screen change, note where they are (motion.ts)...
+  $effect.pre(() => {
     void conn.state;
     untrack(() => {
+      motion.capture();
       game.sync();
-      game.observe();
     });
+  });
+  $effect.pre(() => {
+    void game.draft;
+    void game.sort;
+    untrack(() => motion.capture());
   });
 
   let help = $state(false);
   let menu = $state(false);
+  let sound = $state(soundOn());
 
   const room = $derived(conn.state!);
   const view = $derived(room.game!);
@@ -41,7 +50,18 @@
   const MAX_DENSITY = 3;
   const piles = $derived(tableOrder(view.table));
   let tableEl: HTMLElement | undefined = $state();
+  let deckEl: HTMLElement | undefined = $state();
   let density = $state(0);
+
+  /** Some pile reaches under the deck in the table's corner. */
+  function underDeck(el: HTMLElement): boolean {
+    const deck = deckEl?.getBoundingClientRect();
+    if (!deck) return false;
+    return [...el.querySelectorAll("[data-pile]")].some((pile) => {
+      const r = pile.getBoundingClientRect();
+      return r.right > deck.left - 4 && r.bottom > deck.top - 4;
+    });
+  }
 
   function fitTable() {
     const el = tableEl;
@@ -50,7 +70,7 @@
     // read), then keep the result in state so the markup agrees.
     let d = 0;
     el.dataset.density = "0";
-    while (el.scrollHeight > el.clientHeight + 1 && d < MAX_DENSITY) {
+    while ((el.scrollHeight > el.clientHeight + 1 || underDeck(el)) && d < MAX_DENSITY) {
       el.dataset.density = String(++d);
     }
     density = d;
@@ -65,6 +85,25 @@
     const observer = new ResizeObserver(() => fitTable()); // ...or the table's size does
     observer.observe(tableEl);
     return () => observer.disconnect();
+  });
+  // ...and once they have changed (and the table fits), animate the moves.
+  $effect(() => {
+    void conn.state;
+    void game.draft;
+    void game.sort;
+    untrack(() => {
+      const changes = game.observe();
+      motion.play({
+        from: (_card, zone) => {
+          if (zone === "hand") return motion.deck();
+          const pile = zone.startsWith("pile:") ? Number(zone.slice(5)) : null;
+          const actor = pile === null ? null : (changes?.piles.get(pile) ?? null);
+          return motion.playerIcon(actor);
+        },
+        to: (_card, spot) => (spot.owner && spot.owner !== room.you ? motion.playerIcon(spot.owner) : null),
+        fast: !!room.fast_forward,
+      });
+    });
   });
   // Everyone still holding cards is a CPU: a human may speed them up.
   const canFastForward = $derived.by(() => {
@@ -157,9 +196,6 @@
 <div class="game">
   <header class="bar">
     <span class="code" title={t("lobby.code")}>{room.code}</span>
-    <span class="deck" data-testid="deck-count" aria-label={tn("game.deck", view.deck)}>
-      <span class="deck-icon" aria-hidden="true"></span>{view.deck}
-    </span>
     <span class="spacer"></span>
     <VoiceControls />
     <button type="button" class="icon-btn" aria-label={t("keys.title")} title={t("keys.title") + " (?)"} onclick={() => (help = true)}
@@ -176,6 +212,13 @@
       {#if menu}
         <div class="menu">
           <LangPicker />
+          <button
+            type="button"
+            class="btn"
+            aria-pressed={sound}
+            data-testid="sound"
+            onclick={() => setSound((sound = !sound))}>{sound ? "🔊 " + t("game.sound_on") : "🔇 " + t("game.sound_off")}</button
+          >
           <button type="button" class="btn" onclick={leave}>{t("lobby.leave")}</button>
         </div>
       {/if}
@@ -186,6 +229,7 @@
 
   {#if room.tutorial}<Tutorial {game} {room} />{/if}
 
+  <div class="table-wrap">
   <section class="table" aria-label={t("table.title")} data-testid="table"
     data-density={density}
     bind:this={tableEl}
@@ -205,6 +249,22 @@
       <p class="empty">{t("table.empty")}</p>
     {/each}
   </section>
+  <!-- The deck, in the table's corner: tap it to draw. -->
+  <button
+    type="button"
+    class="deck"
+    class:empty={deckEmpty}
+    data-testid="deck"
+    bind:this={deckEl}
+    disabled={!game.active || deckEmpty || !game.allowDraw}
+    aria-label={tn("game.deck", view.deck) + (game.active ? ". " + t("game.draw") : "")}
+    title={t("game.draw") + " (D)"}
+    onclick={() => game.draw()}
+  >
+    <span class="stack" aria-hidden="true"></span>
+    <span class="count" data-testid="deck-count">{view.deck}</span>
+  </button>
+  </div>
 
   {#if game.drafting}
     <div class="sheet-wrap"><StagingSheet {game} /></div>
@@ -328,20 +388,74 @@
     font-weight: 800;
     letter-spacing: 0.12em;
   }
-  .deck {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    font-weight: 700;
-    font-variant-numeric: tabular-nums;
+  .table-wrap {
+    position: relative;
+    display: flex;
+    flex: 1;
+    min-height: 80px;
+    margin: 0 6px;
   }
-  .deck-icon {
-    width: 16px;
-    height: 22px;
+  .deck {
+    position: absolute;
+    right: 8px;
+    bottom: 8px;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: #fff;
+    font: inherit;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .deck:disabled {
+    cursor: default;
+  }
+  .deck .stack {
+    position: relative;
+    width: 40px;
+    height: 56px;
     border: 2px solid #fff;
-    border-radius: 3px;
-    background: repeating-linear-gradient(45deg, #b3263a 0 3px, #8c1c2d 3px 6px);
-    box-shadow: 2px 2px 0 rgb(0 0 0 / 0.3);
+    border-radius: 5px;
+    background: repeating-linear-gradient(45deg, #b3263a 0 4px, #8c1c2d 4px 8px);
+    /* The cards underneath. */
+    box-shadow:
+      2px 2px 0 -1px #8c1c2d,
+      2px 2px 0 0 #fff,
+      4px 4px 0 -1px #8c1c2d,
+      4px 4px 0 0 #fff,
+      4px 6px 8px rgb(0 0 0 / 0.4);
+    transition: transform 0.12s ease;
+  }
+  .deck:not(:disabled):hover .stack,
+  .deck:not(:disabled):active .stack {
+    transform: translateY(-3px);
+  }
+  .deck.empty .stack {
+    border-style: dashed;
+    border-color: rgb(255 255 255 / 0.5);
+    background: rgb(0 0 0 / 0.15);
+    box-shadow: none;
+  }
+  .deck .count {
+    min-width: 26px;
+    padding: 0 6px;
+    border-radius: 999px;
+    background: rgb(0 0 0 / 0.45);
+    font-size: 12px;
+    font-weight: 800;
+    line-height: 18px;
+    font-variant-numeric: tabular-nums;
+    text-align: center;
+  }
+  .deck:focus-visible {
+    outline: 3px solid #39a0ff;
+    outline-offset: 2px;
+    border-radius: 6px;
   }
   .spacer {
     flex: 1;
@@ -373,7 +487,6 @@
     overflow-y: auto;
     background: radial-gradient(ellipse at center, #1d6b45, #145236 80%);
     border-radius: 14px;
-    margin: 0 6px;
     box-shadow: inset 0 2px 12px rgb(0 0 0 / 0.35);
   }
   /* Denser tables: smaller pile cards that overlap more, showing the corner. */
@@ -480,7 +593,17 @@
     .table {
       gap: 12px;
       padding: 16px;
+    }
+    .table-wrap {
       margin: 0 10px;
+    }
+    .deck {
+      right: 14px;
+      bottom: 14px;
+    }
+    .deck .stack {
+      width: 48px;
+      height: 68px;
     }
     .sheet-wrap {
       width: min(900px, 100%);

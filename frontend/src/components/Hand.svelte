@@ -51,6 +51,7 @@
   bind:clientWidth={width}
   style:height="{layout.height}px"
   data-nav-group="hand"
+  data-zone="hand"
   role="group"
   aria-label={tn("hand.label", cards.length)}
   onclick={(e) => e.target === e.currentTarget && onplace?.()}
