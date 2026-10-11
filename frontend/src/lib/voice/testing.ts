@@ -273,6 +273,8 @@ export class FakeServer {
   clients = new Map<string, FakeClient>();
   /** When false, state updates aren't delivered (to simulate lost messages). */
   deliverStates = true;
+  /** Whether a client gets state updates. */
+  statesFor: (id: string) => boolean = () => true;
   private queues = new Map<string, Promise<void>>();
 
   constructor(
@@ -311,6 +313,7 @@ export class FakeServer {
   broadcast() {
     if (!this.deliverStates) return;
     for (const client of this.clients.values()) {
+      if (!this.statesFor(client.id)) continue;
       const snapshot = this.players.map((p) => ({ ...p }));
       this.enqueue(`client<-${client.id}`, () => client.voice.updatePeers(snapshot, client.id));
     }

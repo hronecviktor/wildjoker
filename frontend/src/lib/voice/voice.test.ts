@@ -34,8 +34,34 @@ describe("mesh", () => {
     await Promise.all(clients.map((c) => c.voice.join()));
     await server.settle();
     expect(meshProblems(server)).toEqual([]);
-    // Offers crossed and were resolved by rolling back.
-    expect(clients.flatMap((c) => c.env.pcs).some((pc) => pc.rollbacks > 0)).toBe(true);
+  });
+
+  it("resolves crossing offers when the polite side stops waiting", async () => {
+    vi.spyOn(timing, "politeWait", "get").mockReturnValue(0);
+    let rollbacks = 0;
+    for (const seed of [1, 2, 3, 4, 5, 6]) {
+      const server = newServer(seed);
+      const clients = ["a", "b", "c", "d"].map((id) => server.add(id));
+      await server.settle(2);
+      await Promise.all(clients.map((c) => c.voice.join()));
+      await server.settle();
+      expect(meshProblems(server)).toEqual([]);
+      rollbacks += clients.flatMap((c) => c.env.pcs).reduce((n, pc) => n + pc.rollbacks, 0);
+    }
+    expect(rollbacks).toBeGreaterThan(0);
+  });
+
+  it("the polite side offers after a while if the other side doesn't", async () => {
+    vi.spyOn(timing, "politeWait", "get").mockReturnValue(30);
+    const server = newServer();
+    const [a, b] = ["a", "b"].map((id) => server.add(id));
+    await server.settle(2);
+    // b never hears that a is in voice, so it doesn't offer.
+    server.statesFor = (id) => id !== "b";
+    await Promise.all([a, b].map((x) => x.voice.join()));
+    await server.settle();
+    expect(meshProblems(server)).toEqual([]);
+    expect(meshProblems(server)).toEqual([]);
   });
 
   it("handles leaving and rejoining", async () => {

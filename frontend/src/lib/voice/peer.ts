@@ -41,6 +41,8 @@ export interface PeerEvents {
 export const timing = {
   /** How long (ms) a connection may stay failed after an ICE restart before it is replaced. */
   failedTimeout: 10_000,
+  /** How long (ms) the polite side waits for the first offer before offering itself. */
+  politeWait: 3_000,
 };
 
 export class Peer {
@@ -55,6 +57,12 @@ export class Peer {
   private settingRemoteAnswer = false;
   private queue: Promise<void> = Promise.resolve();
   private failedTimer: ReturnType<typeof setTimeout> | null = null;
+  // The polite side doesn't offer until it got the first offer (or waited
+  // politeWait): when initial offers cross, Chromium sometimes never starts
+  // ICE on the side that rolled back.
+  private started: boolean;
+  private negotiationPending = false;
+  private startTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(
     readonly id: string,
@@ -65,19 +73,16 @@ export class Peer {
     private events: PeerEvents,
   ) {
     this.sid = env.randomId();
+    this.started = !polite;
     const pc = (this.pc = env.createPeerConnection(config));
 
-    pc.onnegotiationneeded = async () => {
-      try {
-        this.makingOffer = true;
-        await pc.setLocalDescription();
-        if (pc.localDescription) this.send({ description: pc.localDescription.toJSON() });
-      } catch (e) {
-        if (!this.closed) console.warn("voice: offer to", this.id, "failed", e);
-      } finally {
-        this.makingOffer = false;
-      }
+    pc.onnegotiationneeded = () => {
+      if (this.started) this.negotiate();
+      else this.negotiationPending = true;
     };
+    if (polite) {
+      this.startTimer = setTimeout(() => this.start(), timing.politeWait);
+    }
 
     pc.onicecandidate = ({ candidate }) => {
       if (candidate) this.send({ candidate: candidate.toJSON() });
@@ -101,6 +106,32 @@ export class Peer {
     return this.queue;
   }
 
+  private async negotiate(): Promise<void> {
+    const pc = this.pc;
+    try {
+      this.makingOffer = true;
+      await pc.setLocalDescription();
+      // Not sent if an incoming offer rolled ours back in the meantime.
+      if (pc.signalingState === "have-local-offer" && pc.localDescription) {
+        this.send({ description: pc.localDescription.toJSON() });
+      }
+    } catch (e) {
+      if (!this.closed) console.warn("voice: offer to", this.id, "failed", e);
+    } finally {
+      this.makingOffer = false;
+    }
+  }
+
+  /** From now on this side may offer too. */
+  private start(): void {
+    if (this.startTimer) clearTimeout(this.startTimer);
+    this.startTimer = null;
+    if (this.started || this.closed) return;
+    this.started = true;
+    if (this.negotiationPending && this.pc.signalingState === "stable") this.negotiate();
+    this.negotiationPending = false;
+  }
+
   setConfiguration(config: RTCConfiguration): void {
     try {
       this.pc.setConfiguration(config);
@@ -113,6 +144,7 @@ export class Peer {
     if (this.closed) return;
     this.closed = true;
     if (this.failedTimer) clearTimeout(this.failedTimer);
+    if (this.startTimer) clearTimeout(this.startTimer);
     this.pc.onnegotiationneeded = this.pc.onicecandidate = null;
     this.pc.ontrack = this.pc.onconnectionstatechange = null;
     this.pc.close();
@@ -135,6 +167,12 @@ export class Peer {
         this.settingRemoteAnswer = false;
       }
       if (description.type === "offer") {
+        if (!this.started) {
+          // Our track rides along in the answer; nothing left to offer.
+          this.started = true;
+          this.negotiationPending = false;
+          if (this.startTimer) clearTimeout(this.startTimer);
+        }
         await pc.setLocalDescription();
         if (pc.localDescription) this.send({ description: pc.localDescription.toJSON() });
       }
