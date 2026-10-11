@@ -18,6 +18,17 @@ apt package (as a systemd service with `/etc/caddy/Caddyfile`), Docker with
 the compose plugin, and `ufw` as the firewall. Run them as root or with
 `sudo`.
 
+**Compose v2:** `docker compose version` must work. The old standalone
+`docker-compose` (v1) can't read the compose file (`'name' does not match
+any of the regexes`). Install the plugin from the same place Docker came
+from:
+
+```bash
+apt policy docker.io docker-ce 2>/dev/null | grep -B1 "Installed: [0-9]"
+apt install docker-compose-v2        # if docker.io (Ubuntu's Docker) is installed
+apt install docker-compose-plugin    # if docker-ce (Docker's repository) is installed
+```
+
 ## Values you choose
 
 | What | Where it goes | Example |
