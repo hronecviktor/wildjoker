@@ -134,9 +134,11 @@
   }
   .who.changed-by {
     z-index: 5; /* above flashing cards, which lift */
-    top: 0;
+    /* On the bottom edge, clear of the rank and suit corners at the top. */
+    top: auto;
+    bottom: 0;
     left: 8px;
-    transform: translateY(-60%);
+    transform: translateY(50%);
     background: #1f9d57;
     font-size: 12px;
     animation: fade-out 3s ease-in forwards;
