@@ -100,7 +100,7 @@ voice, so a peer that rejoined is recognised and gets a fresh connection.
 {
   "ice_servers": [
     {"urls": ["stun:stun.l.google.com:19302"]},
-    {"urls": ["turn:wildjoker.0s.is:3478?transport=udp", "..."],
+    {"urls": ["turn:zolik.0s.is:3478?transport=udp", "..."],
      "username": "1760000000:1a2b3c4d", "credential": "..."}
   ],
   "ttl": 43200

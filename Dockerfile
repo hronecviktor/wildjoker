@@ -3,10 +3,13 @@
 #   docker build -t wildjoker .
 #   docker run -p 127.0.0.1:8000:8000 wildjoker
 #
-# See deploy/README.md for running it in production.
+# deploy/publish.sh builds it and pushes it to Docker Hub; see
+# deploy/README.md for running it in production.
 
 # -- frontend -------------------------------------------------------------------
-FROM node:20-slim AS frontend
+# The built app is the same on every platform, so build it natively even when
+# the image is for another architecture.
+FROM --platform=$BUILDPLATFORM node:20-slim AS frontend
 WORKDIR /src/frontend
 COPY frontend/ ./
 # Builds the Svelte app into dist/. Without a frontend/package.json (a branch

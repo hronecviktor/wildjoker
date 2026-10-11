@@ -32,7 +32,7 @@ browser (Svelte SPA) ──WebSocket──▶ Python server (game state, CPU pla
 ## Lobby
 
 - Creating a game opens its lobby and gives the host an **invite link**
-  (`wildjoker.0s.is/j/ABCD`) with copy and share buttons (the phone's
+  (`zolik.0s.is/j/ABCD`) with copy and share buttons (the phone's
   share menu where available). The 4-letter code is shown as well.
 - Opening the link asks for a name and drops the player straight into the
   lobby.
@@ -169,8 +169,10 @@ instead of 15.
 
 ## Hosting
 
-- Served from the same server as bbl3d.0s.is, behind Caddy, for example at
-  `wildjoker.0s.is` (Caddy handles TLS and WebSocket upgrade).
+- Served from the same server as bbl3d.0s.is, behind Caddy, at both
+  `zolik.0s.is` and `cards.0s.is` (Caddy handles TLS and WebSocket upgrade).
+- The image is built locally and pushed to Docker Hub (`deploy/publish.sh`);
+  the server pulls it.
 - The game runs as a single Docker container; coturn runs alongside it,
   installed by you.
 
@@ -193,7 +195,7 @@ e2e/         Playwright tests: phone and desktop, keyboard-only game
    English and Slovak.
 5. **CPU players:** the four difficulty levels.
 6. **Voice chat**, plus TURN.
-7. **Deployment** to wildjoker.0s.is.
+7. **Deployment** to zolik.0s.is and cards.0s.is.
 
 Each step ends with tests and something you can try. After step 4 you can
 play against other people in the browser, and after step 5 against CPUs.

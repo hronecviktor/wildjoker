@@ -1,18 +1,20 @@
-# Wild Joker game server. Run from this directory:
-#   docker compose up -d --build
-# Settings come from .env next to this file (copy env.example).
+# Wild Joker game server. Run from the directory with this file and .env:
+#   docker compose pull && docker compose up -d
+# The image comes from Docker Hub (WILDJOKER_IMAGE in .env, pushed with
+# deploy/publish.sh). Settings come from .env (copy env.example).
 name: wildjoker
 services:
   wildjoker:
-    build: ..
-    image: wildjoker:latest
+    image: ${WILDJOKER_IMAGE:?set WILDJOKER_IMAGE in .env}
+    # Starts again after crashes and when the server boots (Docker itself
+    # starts at boot).
     restart: unless-stopped
     # Only reachable from the host itself; Caddy proxies to it.
     ports:
       - "127.0.0.1:${WILDJOKER_PORT:-8100}:8000"
     environment:
       WILDJOKER_TURN_URLS: ${WILDJOKER_TURN_URLS:-}
-      WILDJOKER_TURN_SECRET: ${WILDJOKER_TURN_SECRET:?set WILDJOKER_TURN_SECRET in deploy/.env}
+      WILDJOKER_TURN_SECRET: ${WILDJOKER_TURN_SECRET:?set WILDJOKER_TURN_SECRET in .env}
       WILDJOKER_STUN_URLS: ${WILDJOKER_STUN_URLS:-stun:stun.l.google.com:19302}
       WILDJOKER_TURN_TTL: ${WILDJOKER_TURN_TTL:-43200}
       # Trust X-Forwarded-For from Caddy (the port is bound to localhost only).

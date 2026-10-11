@@ -4,7 +4,7 @@
 # hand after installing.
 set -eu
 
-DOMAIN=${DOMAIN:-wildjoker.0s.is}
+DOMAIN=${DOMAIN:-zolik.0s.is}
 # Where Caddy (the Debian/Ubuntu package) keeps its certificates. Find yours
 # with: sudo find / -name "$DOMAIN.crt" -path '*caddy*' 2>/dev/null
 CADDY_CERTS=${CADDY_CERTS:-/var/lib/caddy/.local/share/caddy/certificates/acme-v02.api.letsencrypt.org-directory}
