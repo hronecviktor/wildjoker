@@ -22,7 +22,7 @@ the compose plugin, and `ufw` as the firewall. Run them as root or with
 
 | What | Where it goes | Example |
 |---|---|---|
-| **Docker Hub account** | `deploy/publish.sh` (`DOCKERHUB_USER`), `.env` (`WILDJOKER_IMAGE`) | `viktor` → `viktor/wildjoker:latest` |
+| **Docker Hub account** | `deploy/publish.sh` (`DOCKERHUB_USER`), `.env` (`WILDJOKER_IMAGE`) | `hronecviktor` → `hronecviktor/wildjoker:latest` |
 | **TURN secret**: a long random string, generate it with `openssl rand -hex 32` | `.env` (`WILDJOKER_TURN_SECRET`) **and** `turnserver.conf` (`static-auth-secret`): both must be the same | `3f9c…` (64 hex characters) |
 | **Server's public IPv4** (and IPv6, if it has one) | DNS records; `turnserver.conf` `external-ip` only if the server is behind NAT (step 5.3) | `203.0.113.10` |
 | **Port for the container** (if 8100 is taken) | `.env` (`WILDJOKER_PORT`) and the Caddyfile | `8100` |
@@ -35,16 +35,23 @@ On the machine with the code (the VM or your computer), log in to Docker Hub
 once and publish:
 
 ```bash
-docker login                                 # your Docker Hub account
-DOCKERHUB_USER=viktor deploy/publish.sh      # build and push
+docker login -u hronecviktor                       # once; a Docker Hub access token works as the password
+DOCKERHUB_USER=hronecviktor deploy/publish.sh      # build and push
 ```
 
 It refuses to run with uncommitted changes, so every image matches a
-commit; it's pushed as `viktor/wildjoker:latest` and
-`viktor/wildjoker:<commit>`. The build is for `linux/amd64` (most servers;
-check with `uname -m` on the server: `x86_64`). For an ARM server
-(`aarch64`) set `PLATFORM=linux/arm64`, which needs QEMU emulation for
-buildx on an x86 machine.
+commit; it's pushed as `hronecviktor/wildjoker:latest` and
+`hronecviktor/wildjoker:<commit>`.
+
+The image is built for **linux/arm64**, because the VPS is ARM (`uname -m`
+on the server prints `aarch64`). On an x86 machine buildx needs QEMU
+emulation for that, registered once per boot:
+
+```bash
+docker run --privileged --rm tonistiigi/binfmt --install arm64
+```
+
+For an x86 server, run the script with `PLATFORM=linux/amd64`.
 
 A **public** repository on Docker Hub needs nothing more on the server. For
 a **private** one, run `docker login` on the server too (an access token
@@ -83,7 +90,7 @@ cd /opt/wildjoker
 cp env.example .env
 chmod 600 .env
 openssl rand -hex 32          # copy this: it's your TURN secret
-nano .env                     # WILDJOKER_IMAGE and WILDJOKER_TURN_SECRET
+nano .env                     # paste it as WILDJOKER_TURN_SECRET
 ```
 
 Pull and start it:
@@ -107,7 +114,7 @@ Its settings, all in `.env`:
 
 | Variable | Meaning |
 |---|---|
-| `WILDJOKER_IMAGE` | The image to run, e.g. `viktor/wildjoker:latest` (required). |
+| `WILDJOKER_IMAGE` | The image to run, e.g. `hronecviktor/wildjoker:latest` (required). |
 | `WILDJOKER_TURN_SECRET` | Shared secret for TURN credentials (required). |
 | `WILDJOKER_TURN_URLS` | TURN servers given to browsers, comma-separated. Empty disables TURN. |
 | `WILDJOKER_STUN_URLS` | STUN servers, comma-separated. |
@@ -300,7 +307,7 @@ docker image prune -f            # remove the old image
 ```
 
 To go back to an earlier version, set `WILDJOKER_IMAGE` in `.env` to an
-older commit tag (e.g. `viktor/wildjoker:3ac122e`) and run
+older commit tag (e.g. `hronecviktor/wildjoker:3ac122e`) and run
 `docker compose up -d`.
 
 If the deploy files changed (`git log -p deploy/`), copy them over again

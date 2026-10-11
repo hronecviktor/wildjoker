@@ -2,16 +2,17 @@
 # Build the image and push it to Docker Hub, tagged :latest and with the
 # commit it was built from. Log in first with `docker login`.
 #
-#   DOCKERHUB_USER=yourname deploy/publish.sh
+#   DOCKERHUB_USER=hronecviktor deploy/publish.sh
 #
-# PLATFORM picks the server's architecture (default linux/amd64; for an
-# ARM server use linux/arm64, which needs QEMU emulation set up for buildx).
+# PLATFORM is the server's architecture: linux/arm64 by default (the VPS is
+# ARM). Building it on an x86 machine needs QEMU emulation for buildx, once
+# per boot: docker run --privileged --rm tonistiigi/binfmt --install arm64
 set -eu
 cd "$(dirname "$0")/.."
 
 : "${DOCKERHUB_USER:?set DOCKERHUB_USER to your Docker Hub account}"
 IMAGE=${IMAGE:-$DOCKERHUB_USER/wildjoker}
-PLATFORM=${PLATFORM:-linux/amd64}
+PLATFORM=${PLATFORM:-linux/arm64}
 COMMIT=$(git rev-parse --short HEAD)
 
 if [ -n "$(git status --porcelain)" ]; then
