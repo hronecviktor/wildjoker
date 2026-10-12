@@ -19,10 +19,12 @@ from dataclasses import dataclass, field
 from typing import Any, Literal, Protocol
 
 from ..engine import Config, Game, GameError
+from ..engine import gin as gin_engine
 from ..engine.game import MAX_PLAYERS, MIN_PLAYERS, STAGING_TIMEOUT
+from ..engine.gin import GinGame
 from ..solver import is_stalemate
+from . import gin, tutorial
 from . import protocol as p
-from . import tutorial
 
 log = logging.getLogger(__name__)
 
@@ -72,12 +74,14 @@ class Seat:
 class Room:
     code: str
     settings: Settings
+    # Which game the room plays: Wild Joker, or Gin (see ``server.gin``).
+    kind: p.GameKind = "wild"
     seats: dict[str, Seat] = field(default_factory=dict)
     host: str | None = None
     decks: int = 2
     hand_size: int = 5
     phase: Literal["lobby", "playing", "finished"] = "lobby"
-    game: Game | None = None
+    game: Game | GinGame | None = None
     version: int = 0
     # Only CPUs are still playing and a human asked to speed them up.
     fast_forward: bool = False
@@ -95,7 +99,7 @@ class Room:
     def add_seat(self, name: str, conn: Connection | None, cpu: p.CpuLevel | None = None) -> Seat:
         if self.phase != "lobby":
             raise GameError("game_in_progress")
-        if len(self.seats) >= MAX_PLAYERS:
+        if len(self.seats) >= self.max_players:
             raise GameError("room_full")
         seat = Seat(secrets.token_hex(4), name, secrets.token_urlsafe(16), cpu=cpu, conn=conn)
         self.seats[seat.id] = seat
@@ -119,6 +123,10 @@ class Room:
         seat.voice = False
         self.changed()
 
+    @property
+    def max_players(self) -> int:
+        return gin_engine.MAX_PLAYERS if self.kind == "gin" else MAX_PLAYERS
+
     def humans(self) -> list[Seat]:
         return [s for s in self.seats.values() if s.cpu is None]
 
@@ -136,6 +144,8 @@ class Room:
                 self._leave(seat)
             case p.SetOptions(decks=decks, hand_size=hand_size):
                 self._host_in_lobby(pid)
+                if self.kind == "gin":
+                    raise GameError("bad_config")  # Gin has no options
                 Config(decks, hand_size).check(max(len(self.seats), MIN_PLAYERS))
                 self.decks, self.hand_size = decks, hand_size
                 self.changed()
@@ -199,6 +209,8 @@ class Room:
         """A game action, from a human or a CPU player."""
         if self.phase != "playing" or self.game is None:
             raise GameError("no_game")
+        if self.kind == "gin":
+            return gin.act(self, pid, msg)
         now = self.settings.clock() if now is None else now
         game = self.game
         places = len(game.places)
@@ -251,7 +263,11 @@ class Room:
                 "voice": seat.voice,
                 "muted": seat.muted,
             }
-            if game and seat.id in game.players:
+            if isinstance(game, GinGame) and seat.id in game.scores:
+                info["cards"] = len(game.hand(seat.id))
+                info["score"] = game.scores[seat.id]
+                info["place"] = gin.place(game, seat.id)
+            elif game and seat.id in game.players:
                 player = game.players[seat.id]
                 info["cards"] = len(player.hand)
                 info["opened"] = player.opened
@@ -263,6 +279,7 @@ class Room:
             "type": "state",
             "version": self.version,
             "code": self.code,
+            "kind": self.kind,
             "phase": self.phase,
             "host": self.host,
             "you": pid,
@@ -272,7 +289,9 @@ class Room:
             "players": players,
             "game": None,
         }
-        if game:
+        if isinstance(game, GinGame):
+            result["game"] = gin.view(self, pid)
+        elif game:
             now = self.settings.clock()
             result["game"] = {
                 "version": game.version,
@@ -303,7 +322,7 @@ class Room:
     @property
     def only_cpus_left(self) -> bool:
         """A game is running and everyone still holding cards is a CPU."""
-        if self.phase != "playing" or self.game is None:
+        if self.phase != "playing" or self.game is None or self.kind == "gin":
             return False
         active = self.game.active
         return bool(active) and all(self.seats[pid].cpu is not None for pid in active)
@@ -346,7 +365,7 @@ class Room:
                 handle.cancel()
         self._expiry = self._stalemate = None
         game = self.game
-        if self.phase != "playing" or game is None:
+        if self.phase != "playing" or game is None or self.kind == "gin":
             return
         if game.staging:
             first = min(s.started for s in game.staging.values())
@@ -357,7 +376,7 @@ class Room:
             self._stalemate = loop.call_later(idle, self._check_stalemate)
 
     def expire_staging(self) -> None:
-        if self.game is None or self.phase != "playing":
+        if self.game is None or self.phase != "playing" or self.kind == "gin":
             return
         expired = self.game.expire(self.settings.clock())
         for pid in expired:
@@ -401,6 +420,11 @@ class Room:
     def _start(self) -> None:
         if len(self.seats) < MIN_PLAYERS:
             raise GameError("not_enough_players")
+        if self.kind == "gin":
+            self.game = GinGame.new(list(self.seats))
+            self.phase = "playing"
+            self.changed()
+            return
         config = Config(self.decks, self.hand_size, self.settings.staging_timeout)
         self.game = Game.new(list(self.seats), config)
         self.phase = "playing"
@@ -467,10 +491,10 @@ class RoomManager:
         # Hook for CPU players: called with every new room.
         self.on_room_created: list[Callable[[Room], None]] = []
 
-    def create(self, name: str) -> tuple[Room, Seat]:
+    def create(self, name: str, kind: p.GameKind = "wild") -> tuple[Room, Seat]:
         """A new room with its host seated; attach the host with ``room.connect``."""
         code = self._new_code()
-        room = Room(code, self.settings, last_activity=self.settings.clock())
+        room = Room(code, self.settings, kind=kind, last_activity=self.settings.clock())
         self.rooms[code] = room
         for hook in self.on_room_created:
             hook(room)

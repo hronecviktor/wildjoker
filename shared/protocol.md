@@ -2,7 +2,9 @@
 
 One WebSocket per browser tab at `/ws`. All messages are JSON objects with a
 `type`. Card ids are described in [cards.md](cards.md); pile rules in
-[../RULES.md](../RULES.md). The source of truth is
+[../RULES.md](../RULES.md). A room plays one of two games: Wild Joker
+(`"kind": "wild"`, the default) or Gin (`"kind": "gin"`, see
+[../RULES-GIN.md](../RULES-GIN.md) and [Gin](#gin) below). The source of truth is
 `backend/src/wildjoker/server/protocol.py` (client messages) and
 `backend/src/wildjoker/server/rooms.py` (`Room.view`, the state).
 
@@ -24,9 +26,9 @@ every player, after every change (including other players' actions).
 
 | Client message | Notes |
 |---|---|
-| `{"type": "create", "name": "Viktor"}` | New room; you are the host. |
+| `{"type": "create", "name": "Viktor", "game": "wild"}` | New room; you are the host. `game` is `wild` (default) or `gin`, fixed for the room. |
 | `{"type": "tutorial", "name": "Viktor", "teacher": "Teacher"}` | A private tutorial game against a scripted Teacher (`teacher` is its display name), already started with fixed hands; see `backend/src/wildjoker/server/tutorial.py`. Moves have 60 s. The Teacher only moves when asked with `tutorial_action`. |
-| `{"type": "join", "code": "ABCD", "name": "Hana"}` | Code is case-insensitive. Only in the lobby, at most 8 seats. |
+| `{"type": "join", "code": "ABCD", "name": "Hana"}` | Code is case-insensitive. Only in the lobby, at most 8 seats (Gin: 6). |
 | `{"type": "resume", "code": "ABCD", "token": "..."}` | Take your seat back after a reload or dropped connection. Also takes a seat back from the CPU that stood in after you left. |
 
 Reply: `{"type": "welcome", "code": "ABCD", "you": "<player id>", "token": "<secret>"}`.
@@ -42,7 +44,7 @@ Host only, in the lobby:
 
 | Message | Notes |
 |---|---|
-| `{"type": "set_options", "decks": 2, "hand_size": 5}` | 1–3 decks, 1–15 cards; rejected (`bad_config`) if the seated players couldn't be dealt. |
+| `{"type": "set_options", "decks": 2, "hand_size": 5}` | 1–3 decks, 1–15 cards; rejected (`bad_config`) if the seated players couldn't be dealt. Gin has no options (`bad_config`). |
 | `{"type": "add_cpu", "level": "medium"}` | `easy`, `medium`, `hard` or `expert`. |
 | `{"type": "set_cpu_level", "player": "<id>", "level": "hard"}` | |
 | `{"type": "remove_player", "player": "<id>"}` | Removes a CPU or kicks a human (they get event `kicked`). |
@@ -70,6 +72,26 @@ connection after replying.
 The client builds the move locally (the server never sees a half-finished
 staging area) and should only commit piles it has validated with the shared
 pile rules (`shared/piles.json`). The server checks everything again.
+
+## Gin
+
+Gin rooms replace the game actions above with turns. Only the player whose
+turn it is (`game.turn`) can act, first drawing (`game.step` is `draw`),
+then playing and discarding (`play`). Errors: `not_your_turn`,
+`draw_first`, `already_drew`, `round_over` (between rounds).
+
+| Message | Reply data | Notes |
+|---|---|---|
+| `{"type": "draw"}` | `card` | Top card of the stock. An empty stock is first rebuilt from the discard pile; if that happens a second time with no card played since, the round ends instead (no `card` in the reply, event `stock_out`). `deck_empty` if there's nothing to rebuild it from. |
+| `{"type": "take", "card": id}` | `cards`: taken, bottom first | A card from the discard pile with every card above it. A deeper card must be playable this turn (`cant_play_card`); `game.takeable` lists what you may take. |
+| `{"type": "meld", "cards": [ids]}` | `pile`: new meld id | A run or set from your hand. |
+| `{"type": "lay_off", "pile": id, "cards": [ids]}` | | Add cards from your hand to any meld. |
+| `{"type": "discard", "card": id}` | | Ends the turn. `just_picked` for the card taken from the discard pile this turn; `must_play` while a deeper card taken is still in your hand. |
+| `{"type": "next_round"}` | | Host only, after a round (`game.status` is `round_over`). `round_not_over` otherwise. |
+
+Plays that would leave the turn unable to end are refused: `keep_one` if no
+card would be left to discard, `must_play` if a deeper card taken from the
+discard pile could no longer be played.
 
 ## Voice
 
@@ -119,7 +141,10 @@ the client fetches new credentials before they expire.
   kinds `drew` (`player`; sent to everyone before the state with the new
   card), `went_out` (`player`, `place`: 1-based; only for players who ran
   out of cards, sent before the state that records it), `staging_expired`
-  (only to the player concerned), `stalemate`, `kicked`.
+  (only to the player concerned), `stalemate`, `kicked`. Gin adds `took`
+  (`player`, `count`), `discarded` (`player`), `one_card` (`player`: down
+  to one card), `gin` (`player` went out, sent before the state with the
+  scores) and `stock_out` (the round ended with the stock used up).
 
 ## State
 
@@ -130,6 +155,7 @@ Sent as `{"type": "state", ...}` after every change, tailored to each player:
   "type": "state",
   "version": 42,
   "code": "ABCD",
+  "kind": "wild | gin",
   "phase": "lobby | playing | finished",
   "host": "<player id or null>",
   "you": "<your player id>",
@@ -167,6 +193,45 @@ Sent as `{"type": "state", ...}` after every change, tailored to each player:
 - `version` increases with every state; ignore a state older than the one
   you have.
 
+In a Gin room, `players[]` has `cards`, `score` (the total so far) and
+`place` (once the game is over) instead of `opened`, and `game` is:
+
+```json
+{
+  "kind": "gin",
+  "version": 17,
+  "round": 2,
+  "status": "playing | round_over | finished",
+  "deck": 30,
+  "discard": [4, 61, 23],
+  "melds": [{"id": 1, "cards": [13, 14, 15, 16], "owners": ["<id>", "<id>", "<id>", "<other id>"]}],
+  "dealer": "<id>",
+  "turn": "<id or null between rounds>",
+  "step": "draw | play",
+  "picked": 23,
+  "must_play": null,
+  "scores": {"<id>": 120},
+  "target": 500,
+  "history": [{"<id>": 60, "<other id>": -15}],
+  "result": {"gin": "<id or null>", "table": {}, "hand": {}, "scores": {}, "hands": {}},
+  "winner": null,
+  "places": [],
+  "hand": [5, 9, 40],
+  "takeable": [23]
+}
+```
+
+- `discard` is bottom first; `melds[].owners` names who put down each card.
+- `picked` is the card taken from the discard pile this turn (it can't be
+  discarded); `must_play` is set while a deeper card taken must still go on
+  the table.
+- `result` is set between rounds and at the end: points on the table, in
+  hand, the round's scores and everyone's cards left. `history` holds each
+  finished round's scores.
+- `winner` and `places` (grouped by score) are set when the game is over.
+- `hand` and `takeable` only for players in the game; `takeable` is empty
+  unless it's your turn to draw.
+
 ## Error codes
 
 `bad_message`, `too_large`, `not_joined`, `already_joined`, `no_room`,
@@ -175,4 +240,6 @@ Sent as `{"type": "state", ...}` after every change, tailored to each player:
 `unknown_player`, `deck_empty`, `deck_not_empty`, `already_opened`,
 `invalid_opening`, `not_opened`, `bad_card`, `bad_pile`, `pile_locked`,
 `not_staging`, `staging_expired`, `empty_move`, `invalid_pile`,
-`not_in_voice`, `humans_playing`, `not_tutorial`.
+`not_in_voice`, `humans_playing`, `not_tutorial`, `not_your_turn`,
+`draw_first`, `already_drew`, `round_over`, `round_not_over`,
+`just_picked`, `must_play`, `cant_play_card`, `keep_one`.

@@ -1,9 +1,11 @@
 # Wild Joker
 
 A real-time multiplayer card game for the browser: rummy with no turns,
-where everyone plays at once and the table can be rearranged freely.
+where everyone plays at once and the table can be rearranged freely. The
+start page also offers Gin, the family's turn-based rummy to 500 points.
 
 - [RULES.md](RULES.md): the rules
+- [RULES-GIN.md](RULES-GIN.md): the rules of Gin
 - [DESIGN.md](DESIGN.md): architecture and plans
 - [shared/protocol.md](shared/protocol.md): client–server messages
 - [deploy/README.md](deploy/README.md): publishing the image and running it

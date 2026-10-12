@@ -1,7 +1,8 @@
 <script lang="ts">
-  // The end of a game: finishing order, and the host can go back to the lobby.
-  import { t } from "../i18n/index.svelte";
-  import type { StateMessage } from "../lib/protocol";
+  // The end of a game: finishing order (in Gin by total score), and the host
+  // can go back to the lobby.
+  import { t, tn } from "../i18n/index.svelte";
+  import { ginView, type StateMessage } from "../lib/protocol";
   import { act, conn, leaveRoom, startTutorial } from "../lib/session.svelte";
   import LangPicker from "./LangPicker.svelte";
   import VoiceControls from "./VoiceControls.svelte";
@@ -11,6 +12,7 @@
   const isHost = $derived(room.host === room.you);
   const name = (id: string) => room.players.find((p) => p.id === id)?.name ?? "?";
   const places = $derived(room.game?.places ?? []);
+  const scores = $derived(ginView(room)?.scores ?? null);
   const medals = ["🥇", "🥈", "🥉"];
   // Numbered like players[].place: players sharing a place (a draw) share the number.
   const numbered = $derived(places.map((ids, i) => ({ place: i + 1, ids })));
@@ -38,6 +40,7 @@
           <span class="sr-only">{t("players.place", { place })}:</span>
           {ids.map(name).join(", ")}
           {#if ids.length > 1}<span class="draw">{t("finished.shared")}</span>{/if}
+          {#if scores}<span class="points" data-testid="final-score">{tn("players.points", scores[ids[0]])}</span>{/if}
         </span>
       </li>
     {/each}
@@ -118,6 +121,12 @@
     width: 36px;
     font-size: 26px;
     text-align: center;
+  }
+  .points {
+    display: block;
+    color: var(--muted);
+    font-size: 15px;
+    font-variant-numeric: tabular-nums;
   }
   .draw {
     margin-left: 6px;

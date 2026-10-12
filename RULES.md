@@ -2,7 +2,8 @@
 
 A family card game: real-time rummy where everyone plays at once and the
 table can be rearranged freely. This document is the reference for the game
-engine, the CPU players and the tutorial.
+engine, the CPU players and the tutorial. The app's other game, Gin, has
+its own rules in [RULES-GIN.md](RULES-GIN.md).
 
 ## Cards
 

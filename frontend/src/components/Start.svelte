@@ -1,11 +1,14 @@
 <script lang="ts">
-  // First screen: pick a name, then create a game or join one by code.
-  // Opened from an invite link (/j/ABCD) it only asks for the name.
+  // First screen: pick the game (Wild Joker or Gin) and a name, then create
+  // a game or join one by code. Opened from an invite link (/j/ABCD) it only
+  // asks for the name: the room already has its game.
   import { errorText, t } from "../i18n/index.svelte";
   import { ServerError } from "../lib/connection.svelte";
   import { conn, startTutorial } from "../lib/session.svelte";
   import { load, save } from "../lib/storage";
   import { canInstall, promptInstall } from "../lib/install.svelte";
+  import type { GameKind } from "../lib/protocol";
+  import GinRules from "./GinRules.svelte";
   import InstallHelp from "./InstallHelp.svelte";
   import LangPicker from "./LangPicker.svelte";
 
@@ -16,6 +19,13 @@
   let busy = $state(false);
   let error = $state("");
   let installHelp = $state(false);
+  let rules = $state(false);
+  let kind = $state<GameKind>(load<GameKind>("game", "wild") === "gin" ? "gin" : "wild");
+
+  function pick(k: GameKind) {
+    kind = k;
+    save("game", k);
+  }
 
   async function installApp() {
     if (!(await promptInstall())) installHelp = true;
@@ -40,10 +50,14 @@
     }
   }
 
-  const create = () => go(() => conn.create(name.trim()));
+  const create = () => go(() => conn.create(name.trim(), kind));
   const join = (c: string) => go(() => conn.joinRoom(c.trim().toUpperCase(), name.trim()));
 
   async function tutorial() {
+    if (kind === "gin") {
+      rules = true;
+      return;
+    }
     if (busy) return;
     busy = true;
     error = "";
@@ -61,8 +75,27 @@
 
 <main class="start">
   <div class="top"><LangPicker /></div>
-  <h1 class="logo"><span aria-hidden="true">🃏</span> Wild Joker</h1>
-  <p class="tagline">{t("start.tagline")}</p>
+  {#if invite}
+    <h1 class="logo"><span aria-hidden="true">🃏</span> Wild Joker</h1>
+  {:else}
+    <h1 class="logo">
+      <span aria-hidden="true">{kind === "gin" ? "♣" : "🃏"}</span>
+      {kind === "gin" ? t("start.game_gin") : "Wild Joker"}
+    </h1>
+    <p class="tagline">{kind === "gin" ? t("start.tagline_gin") : t("start.tagline")}</p>
+    <div class="games" role="radiogroup" aria-label={t("start.game")}>
+      {#each [["wild", "🃏", t("start.game_wild")], ["gin", "♣", t("start.game_gin")]] as [k, icon, label] (k)}
+        <button
+          type="button"
+          role="radio"
+          aria-checked={kind === k}
+          class:active={kind === k}
+          data-testid="game-{k}"
+          onclick={() => pick(k as GameKind)}><span aria-hidden="true">{icon}</span> {label}</button
+        >
+      {/each}
+    </div>
+  {/if}
 
   <form
     class="panel"
@@ -140,6 +173,7 @@
 </main>
 
 {#if installHelp}<InstallHelp onclose={() => (installHelp = false)} />{/if}
+{#if rules}<GinRules onclose={() => (rules = false)} />{/if}
 
 <style>
   .start {
@@ -166,6 +200,33 @@
     margin: 0 0 8px;
     color: var(--muted);
     text-align: center;
+  }
+  .games {
+    display: flex;
+    gap: 4px;
+    padding: 4px;
+    border-radius: 14px;
+    background: var(--panel);
+  }
+  .games button {
+    flex: 1;
+    min-height: 44px;
+    border: 0;
+    border-radius: 10px;
+    background: transparent;
+    color: var(--muted);
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .games button.active {
+    background: var(--accent);
+    color: #fff;
+  }
+  .games button:focus-visible {
+    outline: 3px solid #39a0ff;
+    outline-offset: 2px;
   }
   .panel {
     display: flex;

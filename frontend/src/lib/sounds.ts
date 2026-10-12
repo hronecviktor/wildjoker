@@ -1,5 +1,6 @@
 // Subtle sound effects, made with Web Audio so there are no files to load:
-// a soft card flick when anyone draws, and a short chime when someone goes out.
+// a soft card flick when anyone draws, a short chime when someone goes out,
+// and in Gin a soft ding when it becomes your turn.
 // Browsers only allow audio after the user has interacted with the page, so
 // the context starts on the first tap or key press.
 
@@ -57,6 +58,26 @@ export function drawSound(): void {
   noise.connect(filter).connect(gain).connect(ac.destination);
   noise.start(t);
   noise.stop(t + length);
+}
+
+/** Two soft notes: it's your turn (Gin). */
+export function turnSound(): void {
+  const ac = ready();
+  if (!ac) return;
+  const start = ac.currentTime + 0.02;
+  [659.25, 880].forEach((freq, i) => {
+    const t = start + i * 0.09;
+    const osc = ac.createOscillator();
+    osc.type = "sine";
+    osc.frequency.value = freq;
+    const gain = ac.createGain();
+    gain.gain.setValueAtTime(0.0001, t);
+    gain.gain.exponentialRampToValueAtTime(0.1, t + 0.015);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.35);
+    osc.connect(gain).connect(ac.destination);
+    osc.start(t);
+    osc.stop(t + 0.4);
+  });
 }
 
 /** A short rising chime for someone going out; a little brighter when it's you. */

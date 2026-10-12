@@ -7,6 +7,7 @@
   import { act, conn, leaveRoom, voice } from "../lib/session.svelte";
   import { toast } from "../lib/toasts.svelte";
   import { keepAwake } from "../lib/wakelock";
+  import GinRules from "./GinRules.svelte";
   import LangPicker from "./LangPicker.svelte";
   import VoiceControls from "./VoiceControls.svelte";
 
@@ -19,6 +20,9 @@
   const link = $derived(`${location.origin}/j/${room.code}`);
   const canShare = typeof navigator !== "undefined" && "share" in navigator;
   let cpuLevel = $state<CpuLevel>("medium");
+  let rules = $state(false);
+  const gin = $derived(room.kind === "gin");
+  const maxPlayers = $derived(gin ? 6 : 8);
 
   const send = (msg: { type: string; [key: string]: unknown }) => act(() => conn.request(msg));
 
@@ -29,7 +33,8 @@
 
   async function share() {
     try {
-      await navigator.share({ title: "Wild Joker", text: t("lobby.share_text"), url: link });
+      const title = gin ? t("start.game_gin") : "Wild Joker";
+      await navigator.share({ title, text: t(gin ? "lobby.share_text_gin" : "lobby.share_text"), url: link });
     } catch {
       // cancelled
     }
@@ -106,7 +111,7 @@
         <button
           type="button"
           class="btn"
-          disabled={room.players.length >= 8}
+          disabled={room.players.length >= maxPlayers}
           onclick={() => send({ type: "add_cpu", level: cpuLevel })}
           data-testid="add-cpu">🤖 {t("lobby.add_cpu")}</button
         >
@@ -114,49 +119,56 @@
     {/if}
   </section>
 
-  <section class="panel options">
-    <h2>{t("lobby.options")}</h2>
-    <div class="option">
-      <span id="decks-label">{t("lobby.decks")}</span>
-      {#if isHost}
-        <div class="seg" role="radiogroup" aria-labelledby="decks-label">
-          {#each [1, 2, 3] as n (n)}
+  {#if gin}
+    <section class="panel game-kind" data-testid="gin-info">
+      <p><span aria-hidden="true">♣</span> {t("lobby.game_gin")}</p>
+      <button type="button" class="btn" onclick={() => (rules = true)}>{t("lobby.rules")}</button>
+    </section>
+  {:else}
+    <section class="panel options">
+      <h2>{t("lobby.options")}</h2>
+      <div class="option">
+        <span id="decks-label">{t("lobby.decks")}</span>
+        {#if isHost}
+          <div class="seg" role="radiogroup" aria-labelledby="decks-label">
+            {#each [1, 2, 3] as n (n)}
+              <button
+                type="button"
+                role="radio"
+                aria-checked={room.options.decks === n}
+                class:active={room.options.decks === n}
+                onclick={() => setOptions(n, room.options.hand_size)}>{n}</button
+              >
+            {/each}
+          </div>
+        {:else}
+          <strong>{room.options.decks}</strong>
+        {/if}
+      </div>
+      <div class="option">
+        <span id="hand-label">{t("lobby.hand_size")}</span>
+        {#if isHost}
+          <div class="stepper" role="group" aria-labelledby="hand-label">
             <button
               type="button"
-              role="radio"
-              aria-checked={room.options.decks === n}
-              class:active={room.options.decks === n}
-              onclick={() => setOptions(n, room.options.hand_size)}>{n}</button
+              aria-label={t("lobby.fewer")}
+              disabled={room.options.hand_size <= 1}
+              onclick={() => setOptions(room.options.decks, room.options.hand_size - 1)}>−</button
             >
-          {/each}
-        </div>
-      {:else}
-        <strong>{room.options.decks}</strong>
-      {/if}
-    </div>
-    <div class="option">
-      <span id="hand-label">{t("lobby.hand_size")}</span>
-      {#if isHost}
-        <div class="stepper" role="group" aria-labelledby="hand-label">
-          <button
-            type="button"
-            aria-label={t("lobby.fewer")}
-            disabled={room.options.hand_size <= 1}
-            onclick={() => setOptions(room.options.decks, room.options.hand_size - 1)}>−</button
-          >
-          <output aria-live="polite">{room.options.hand_size}</output>
-          <button
-            type="button"
-            aria-label={t("lobby.more")}
-            disabled={room.options.hand_size >= 15}
-            onclick={() => setOptions(room.options.decks, room.options.hand_size + 1)}>+</button
-          >
-        </div>
-      {:else}
-        <strong>{room.options.hand_size}</strong>
-      {/if}
-    </div>
-  </section>
+            <output aria-live="polite">{room.options.hand_size}</output>
+            <button
+              type="button"
+              aria-label={t("lobby.more")}
+              disabled={room.options.hand_size >= 15}
+              onclick={() => setOptions(room.options.decks, room.options.hand_size + 1)}>+</button
+            >
+          </div>
+        {:else}
+          <strong>{room.options.hand_size}</strong>
+        {/if}
+      </div>
+    </section>
+  {/if}
 
   <footer class="actions">
     <button type="button" class="btn" onclick={leaveRoom}>{t("lobby.leave")}</button>
@@ -176,6 +188,8 @@
     <p class="hint">{t("lobby.need_players")}</p>
   {/if}
 </main>
+
+{#if rules}<GinRules onclose={() => (rules = false)} />{/if}
 
 <style>
   .lobby {
@@ -308,6 +322,16 @@
   }
   .add-cpu {
     justify-content: flex-start;
+  }
+  .game-kind {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .game-kind p {
+    flex: 1;
+    margin: 0;
+    font-weight: 600;
   }
   .option {
     display: flex;

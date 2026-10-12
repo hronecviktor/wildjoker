@@ -7,7 +7,7 @@ import { ServerError, type Connection } from "./connection.svelte";
 import * as D from "./draft";
 import { diff, type Changes, type Snapshot } from "./changes";
 import { arrange, isValidOpening } from "./piles";
-import type { TablePile } from "./protocol";
+import { wildView, type TablePile } from "./protocol";
 import { load, save } from "./storage";
 import { toast } from "./toasts.svelte";
 
@@ -36,7 +36,7 @@ export class GameController {
     return this.conn.state;
   }
   get game() {
-    return this.conn.state?.game ?? null;
+    return wildView(this.conn.state);
   }
   get me() {
     return this.conn.state?.players.find((p) => p.id === this.conn.you) ?? null;
@@ -139,7 +139,7 @@ export class GameController {
   /** Compare a new state with the previous one and flash what changed. */
   observe(): Changes | null {
     const state = this.state;
-    const game = state?.game;
+    const game = wildView(state);
     if (!state || !game) {
       this.last = null;
       return null;

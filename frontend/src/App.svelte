@@ -1,6 +1,7 @@
 <script lang="ts">
   import Finished from "./components/Finished.svelte";
   import Game from "./components/Game.svelte";
+  import GinGame from "./components/GinGame.svelte";
   import Lobby from "./components/Lobby.svelte";
   import Start from "./components/Start.svelte";
   import { errorText, t } from "./i18n/index.svelte";
@@ -57,6 +58,8 @@
 {#if conn.code && conn.state}
   {#if conn.state.phase === "lobby"}
     <Lobby room={conn.state} />
+  {:else if conn.state.phase === "playing" && conn.state.game?.kind === "gin"}
+    <GinGame />
   {:else if conn.state.phase === "playing" && conn.state.game}
     <Game />
   {:else}

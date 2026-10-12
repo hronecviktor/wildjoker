@@ -10,7 +10,8 @@ client can match them. Server messages are plain dicts built in ``rooms``:
 - ``signal``: ``{from, data}`` relayed WebRTC signalling
 - ``event``: ``{kind, ...}`` notable moments for toasts, sounds and
   animations (``drew``, ``went_out``, ``staging_expired``, ``stalemate``,
-  ``kicked``)
+  ``kicked``; in Gin also ``took``, ``discarded``, ``one_card``, ``gin``
+  and ``stock_out``)
 """
 
 from __future__ import annotations
@@ -27,6 +28,7 @@ RoomCode = Annotated[
 ]
 CardIds = Annotated[list[int], Field(max_length=200)]
 CpuLevel = Literal["easy", "medium", "hard", "expert"]
+GameKind = Literal["wild", "gin"]
 
 
 class Message(BaseModel):
@@ -40,6 +42,7 @@ class Message(BaseModel):
 class Create(Message):
     type: Literal["create"]
     name: Name
+    game: GameKind = "wild"
 
 
 class Join(Message):
@@ -125,6 +128,41 @@ class Commit(Message):
     piles: Annotated[list[CardIds], Field(max_length=100)]
 
 
+class Take(Message):
+    """Gin: take a card from the discard pile, with every card above it."""
+
+    type: Literal["take"]
+    card: int
+
+
+class Meld(Message):
+    """Gin: put a new meld on the table from your hand."""
+
+    type: Literal["meld"]
+    cards: CardIds
+
+
+class LayOff(Message):
+    """Gin: add cards from your hand to a meld on the table."""
+
+    type: Literal["lay_off"]
+    pile: int
+    cards: CardIds
+
+
+class Discard(Message):
+    """Gin: discard a card, ending your turn."""
+
+    type: Literal["discard"]
+    card: int
+
+
+class NextRound(Message):
+    """Gin, host only: deal the next round after the scores were shown."""
+
+    type: Literal["next_round"]
+
+
 class VoteDraw(Message):
     type: Literal["vote_draw"]
 
@@ -183,6 +221,11 @@ ClientMessage = Annotated[
     | Cancel
     | Commit
     | VoteDraw
+    | Take
+    | Meld
+    | LayOff
+    | Discard
+    | NextRound
     | FastForward
     | TutorialAction
     | VoiceJoin

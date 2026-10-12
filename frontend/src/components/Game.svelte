@@ -17,6 +17,7 @@
   import StagingSheet from "./StagingSheet.svelte";
   import TablePile from "./TablePile.svelte";
   import Tutorial from "./Tutorial.svelte";
+  import { wildView } from "../lib/protocol";
   import { tableOrder } from "../lib/tableOrder";
   import VoiceControls from "./VoiceControls.svelte";
 
@@ -43,7 +44,7 @@
   let sound = $state(soundOn());
 
   const room = $derived(conn.state!);
-  const view = $derived(room.game!);
+  const view = $derived(wildView(room)!);
   const nameOf = (id: string | null) => (id ? (room.players.find((p) => p.id === id)?.name ?? "?") : null);
   const deckEmpty = $derived(view.deck === 0);
   const voted = $derived(view.draw_votes.includes(room.you));

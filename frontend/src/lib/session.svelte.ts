@@ -24,6 +24,19 @@ conn.onEvent = (e) => {
       // Your own card flies into your hand when the new state shows it.
       if (e.player && e.player !== conn.you) drawTo(e.player, !!conn.state?.fast_forward);
       break;
+    case "took":
+    case "discarded":
+      drawSound();
+      break;
+    case "one_card":
+      if (e.player !== conn.you) toast(t("event.one_card", { name: name(e.player) }));
+      break;
+    case "gin": {
+      const you = e.player === conn.you;
+      finishSound(you);
+      toast(you ? t("event.gin_you") : t("event.gin", { name: name(e.player) }));
+      break;
+    }
     case "went_out": {
       // The event arrives before the state that records the place, so it
       // carries the place itself.

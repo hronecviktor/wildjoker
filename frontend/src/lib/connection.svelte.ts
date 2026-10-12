@@ -4,6 +4,7 @@
 import type {
   ErrorMessage,
   EventMessage,
+  GameKind,
   Reply,
   ServerMessage,
   SignalMessage,
@@ -73,9 +74,9 @@ export class Connection {
     }
   }
 
-  /** Create a room; resolves once we're its host. */
-  async create(name: string): Promise<void> {
-    await this.join({ type: "create", name });
+  /** Create a room for a game; resolves once we're its host. */
+  async create(name: string, game: GameKind = "wild"): Promise<void> {
+    await this.join({ type: "create", name, game });
   }
 
   /** Start a tutorial game against the scripted Teacher. */

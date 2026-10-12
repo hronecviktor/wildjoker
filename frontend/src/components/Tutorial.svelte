@@ -5,7 +5,7 @@
   import { untrack } from "svelte";
   import { t } from "../i18n/index.svelte";
   import type { GameController } from "../lib/game.svelte";
-  import type { StateMessage } from "../lib/protocol";
+  import { wildView, type StateMessage } from "../lib/protocol";
   import { conn, leaveRoom } from "../lib/session.svelte";
   import { load, save } from "../lib/storage";
   import { currentStep, STEPS, type TutorialView } from "../lib/tutorial";
@@ -18,9 +18,9 @@
   const asked = new Set<string>();
 
   const view = $derived<TutorialView>({
-    hand: room.game?.hand ?? [],
+    hand: wildView(room)?.hand ?? [],
     shownHand: game.hand,
-    table: room.game?.table ?? [],
+    table: wildView(room)?.table ?? [],
     opened: !!game.me?.opened,
     draft: game.draft,
     selected: game.selected,

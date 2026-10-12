@@ -26,6 +26,7 @@ from typing import TYPE_CHECKING, Any
 from ..engine import Card, GameError
 from ..server import protocol as p
 from ..server.rooms import FAST_FORWARD
+from .gin import GinCpuPlayer
 from .levels import EXPERT, LEVELS, Level, Moves
 from .moves import Move, Search, find_moves, openings
 
@@ -417,7 +418,7 @@ class CpuPlayers:
         self.levels = levels
         self.rng = random.Random(seed)
         self.run_blocking = run_blocking
-        self.players: dict[tuple[str, str], tuple[CpuPlayer, asyncio.Task]] = {}
+        self.players: dict[tuple[str, str], tuple[CpuPlayer | GinCpuPlayer, asyncio.Task]] = {}
 
     def attach(self, manager: RoomManager) -> None:
         manager.on_room_created.append(self.watch)
@@ -453,7 +454,8 @@ class CpuPlayers:
 
     def _start(self, room: Room, pid: str, level: Level) -> None:
         rng = random.Random(self.rng.getrandbits(64))
-        player = CpuPlayer(room, pid, level, rng, room.settings.cpu_speed, self.run_blocking)
+        cls = GinCpuPlayer if room.kind == "gin" else CpuPlayer
+        player = cls(room, pid, level, rng, room.settings.cpu_speed, self.run_blocking)
         task = asyncio.create_task(player.run(), name=f"cpu {room.code} {pid}")
         task.add_done_callback(_log_crash)
         self.players[room.code, pid] = (player, task)

@@ -88,8 +88,8 @@ async def game_socket(ws: WebSocket) -> None:
                     if seat is not None:
                         raise GameError("already_joined")
                     match msg:
-                        case p.Create(name=name):
-                            room, seat = manager.create(name)
+                        case p.Create(name=name, game=kind):
+                            room, seat = manager.create(name, kind)
                         case p.Tutorial(name=name, teacher=teacher):
                             room, seat = manager.create_tutorial(name, teacher)
                         case p.Join(code=code, name=name):

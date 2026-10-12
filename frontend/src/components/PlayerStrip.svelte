@@ -1,10 +1,16 @@
 <script lang="ts">
-  // Everyone at the table: card counts, opened status, places, voice.
+  // Everyone at the table: card counts, opened status, places, voice; in Gin
+  // whose turn it is and the scores.
   import { t, tn } from "../i18n/index.svelte";
   import type { PlayerView } from "../lib/protocol";
   import { voice } from "../lib/session.svelte";
 
-  let { players, you, host }: { players: PlayerView[]; you: string | null; host: string | null } = $props();
+  let {
+    players,
+    you,
+    host,
+    turn = null,
+  }: { players: PlayerView[]; you: string | null; host: string | null; turn?: string | null } = $props();
   const speaking = voice.speaking;
 
   function describe(p: PlayerView): string {
@@ -14,6 +20,8 @@
     if (p.place) parts.push(t("players.place", { place: p.place }));
     else if (p.cards !== undefined) parts.push(tn("players.cards", p.cards));
     if (p.opened === false) parts.push(t("players.not_opened"));
+    if (p.score !== undefined) parts.push(tn("players.points", p.score));
+    if (p.id === turn) parts.push(t("players.turn"));
     if (!p.connected) parts.push(t("players.offline"));
     if (p.voice) parts.push(p.muted ? t("voice.muted") : t("voice.in_voice"));
     if ($speaking.has(p.id)) parts.push(t("voice.speaking"));
@@ -28,7 +36,8 @@
       class:me={p.id === you}
       class:offline={!p.connected}
       class:speaking={$speaking.has(p.id) && !p.muted}
-      class:out={!!p.place}
+      class:out={!!p.place && p.score === undefined}
+      class:turn={p.id === turn}
       aria-label={describe(p)}
       data-testid="player"
       data-player={p.id}
@@ -46,6 +55,7 @@
       </span>
       <span class="icons" aria-hidden="true">
         {#if p.opened}<span class="opened" title={t("players.opened")}>✓</span>{/if}
+        {#if p.score !== undefined}<span class="score" data-testid="score">{p.score}</span>{/if}
         {#if p.voice}<span>{p.muted ? "🔇" : "🎙"}</span>{/if}
         {#if !p.connected}<span>⚠</span>{/if}
       </span>
@@ -89,6 +99,13 @@
   .me .avatar {
     background: #2958c9;
   }
+  .turn .avatar {
+    box-shadow: 0 0 0 3px #f5b301;
+  }
+  .turn .name {
+    color: #ffd75e;
+    font-weight: 700;
+  }
   .speaking .avatar {
     box-shadow:
       0 0 0 3px #4ade80,
@@ -130,6 +147,10 @@
     min-height: 15px;
     font-size: 11px;
     line-height: 15px;
+  }
+  .score {
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
   }
   .opened {
     color: #4ade80;
