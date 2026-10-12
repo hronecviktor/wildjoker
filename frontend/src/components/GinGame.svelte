@@ -6,6 +6,7 @@
   import { untrack } from "svelte";
   import { t, tn } from "../i18n/index.svelte";
   import { cardLabel } from "../i18n/cards";
+  import { allows, type GinStep, type Move } from "../lib/ginTutorial";
   import { sortCards, type SortMode } from "../lib/cards";
   import { withValues } from "../lib/jokers";
   import * as motion from "../lib/motion";
@@ -19,6 +20,7 @@
   import Card from "./Card.svelte";
   import GinRoundOver from "./GinRoundOver.svelte";
   import GinRules from "./GinRules.svelte";
+  import GinTutorial from "./GinTutorial.svelte";
   import Hand from "./Hand.svelte";
   import LangPicker from "./LangPicker.svelte";
   import PlayerStrip from "./PlayerStrip.svelte";
@@ -40,6 +42,14 @@
   let rules = $state(false);
   let sound = $state(soundOn());
   let fresh = $state.raw<Set<number>>(new Set());
+  /** In the tutorial, the step being played: only its moves are allowed. */
+  let tutorialStep = $state<GinStep | undefined>();
+
+  function allowed(move: Move, cards: number[]): boolean {
+    if (!room.tutorial || !tutorialStep || allows(tutorialStep, move, cards)) return true;
+    toast(t("gin_tutorial.follow"));
+    return false;
+  }
 
   const playing = $derived(view.status === "playing");
   const myTurn = $derived(playing && view.turn === room.you);
@@ -143,6 +153,7 @@
       if (playing && !myTurn) toast(t("error.not_your_turn"));
       return;
     }
+    if (!allowed("draw", [])) return;
     dig = null;
     void send({ type: "draw" });
   }
@@ -153,6 +164,7 @@
       return;
     }
     if (card === top) {
+      if (!allowed("take", [card])) return;
       dig = null;
       void send({ type: "take", card });
     } else if (!takeable.has(card)) {
@@ -163,7 +175,7 @@
   }
 
   async function takeDig() {
-    if (dig === null) return;
+    if (dig === null || !allowed("take", [dig])) return;
     const card = dig;
     if (await send({ type: "take", card })) dig = null;
   }
@@ -173,6 +185,7 @@
       if (acting) toast(t("gin.select_hint"));
       return;
     }
+    if (!allowed("meld", selection!.cards)) return;
     if (await send({ type: "meld", cards: selection!.cards })) selected = [];
   }
 
@@ -186,6 +199,7 @@
       toast(t("error.invalid_pile"), "error");
       return;
     }
+    if (!allowed("lay_off", selected)) return;
     if (await send({ type: "lay_off", pile: meld.id, cards: selected })) selected = [];
   }
 
@@ -194,6 +208,7 @@
       if (acting) toast(t("gin.select_hint"));
       return;
     }
+    if (!allowed("discard", selected)) return;
     if (await send({ type: "discard", card: selected[0] })) selected = [];
   }
 
@@ -269,7 +284,9 @@
 <div class="game">
   <header class="bar">
     <span class="code" title={t("lobby.code")}>{room.code}</span>
-    <span class="round" data-testid="round">{t("gin.round", { n: view.round })} · {t("gin.to", { n: view.target })}</span>
+    <span class="round" data-testid="round"
+      >{t("gin.round", { n: view.round })}{room.tutorial ? "" : " · " + t("gin.to", { n: view.target })}</span
+    >
     <span class="spacer"></span>
     <VoiceControls />
     <button type="button" class="icon-btn" aria-label={t("gin.rules_title")} title={t("gin.rules_title") + " (?)"}
@@ -300,6 +317,10 @@
   </header>
 
   <PlayerStrip players={room.players} you={room.you} host={room.host} turn={view.turn} />
+
+  {#if room.tutorial}
+    <GinTutorial {room} game={view} {selected} {dig} bind:step={tutorialStep} />
+  {/if}
 
   <div class="table-wrap">
     <section class="table" aria-label={t("gin.melds")} data-testid="table">
@@ -372,7 +393,10 @@
     </div>
   </div>
 
-  <p class="status" class:mine={myTurn} data-testid="status" aria-live="polite">{status}</p>
+  {#if !room.tutorial}
+    <!-- (In the tutorial the coach panel explains instead, leaving the table more room.) -->
+    <p class="status" class:mine={myTurn} data-testid="status" aria-live="polite">{status}</p>
+  {/if}
 
   {#if dig !== null}
     <div class="actionbar" role="toolbar" aria-label={t("game.actions")}>

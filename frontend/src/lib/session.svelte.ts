@@ -3,6 +3,7 @@
 import { errorText, t } from "../i18n/index.svelte";
 import { Connection, ServerError } from "./connection.svelte";
 import { drawTo } from "./motion";
+import type { GameKind } from "./protocol";
 import { drawSound, finishSound } from "./sounds";
 import { load, save } from "./storage";
 import { toast } from "./toasts.svelte";
@@ -121,8 +122,8 @@ export async function act<T>(fn: () => Promise<T>): Promise<T | undefined> {
   }
 }
 
-/** Start the tutorial, under the saved name if there is one. */
-export async function startTutorial(name: string): Promise<void> {
-  await conn.tutorial(name.trim() || t("tutorial.you"), t("tutorial.teacher_name"));
+/** Start a game's tutorial, under the saved name if there is one. */
+export async function startTutorial(name: string, game: GameKind = "wild"): Promise<void> {
+  await conn.tutorial(name.trim() || t("tutorial.you"), t("tutorial.teacher_name"), game);
   history.replaceState(null, "", `/j/${conn.code}`);
 }

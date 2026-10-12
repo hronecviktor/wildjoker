@@ -8,7 +8,6 @@
   import { load, save } from "../lib/storage";
   import { canInstall, promptInstall } from "../lib/install.svelte";
   import type { GameKind } from "../lib/protocol";
-  import GinRules from "./GinRules.svelte";
   import InstallHelp from "./InstallHelp.svelte";
   import LangPicker from "./LangPicker.svelte";
 
@@ -19,7 +18,6 @@
   let busy = $state(false);
   let error = $state("");
   let installHelp = $state(false);
-  let rules = $state(false);
   let kind = $state<GameKind>(load<GameKind>("game", "wild") === "gin" ? "gin" : "wild");
 
   function pick(k: GameKind) {
@@ -54,16 +52,12 @@
   const join = (c: string) => go(() => conn.joinRoom(c.trim().toUpperCase(), name.trim()));
 
   async function tutorial() {
-    if (kind === "gin") {
-      rules = true;
-      return;
-    }
     if (busy) return;
     busy = true;
     error = "";
     if (nameOk) save("name", name.trim());
     try {
-      await startTutorial(name);
+      await startTutorial(name, kind);
     } catch (e) {
       if (!(e instanceof ServerError)) throw e;
       error = errorText(e.code);
@@ -173,7 +167,6 @@
 </main>
 
 {#if installHelp}<InstallHelp onclose={() => (installHelp = false)} />{/if}
-{#if rules}<GinRules onclose={() => (rules = false)} />{/if}
 
 <style>
   .start {

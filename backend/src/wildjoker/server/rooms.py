@@ -23,7 +23,7 @@ from ..engine import gin as gin_engine
 from ..engine.game import MAX_PLAYERS, MIN_PLAYERS, STAGING_TIMEOUT
 from ..engine.gin import GinGame
 from ..solver import is_stalemate
-from . import gin, tutorial
+from . import gin, gin_tutorial, tutorial
 from . import protocol as p
 
 log = logging.getLogger(__name__)
@@ -85,8 +85,11 @@ class Room:
     version: int = 0
     # Only CPUs are still playing and a human asked to speed them up.
     fast_forward: bool = False
-    # A tutorial room: one player and the scripted Teacher (see ``tutorial``).
+    # A tutorial room: one player and the scripted Teacher (see ``tutorial``
+    # and ``gin_tutorial``).
     tutorial: bool = False
+    # The Gin Teacher is in the middle of its turn.
+    teacher_moving: bool = False
     last_activity: float = 0.0
     closed: bool = False
     # Called after every change and on close; CPU players hook in here.
@@ -438,6 +441,10 @@ class Room:
         if self.phase != "playing" or self.game is None:
             raise GameError("no_game")
         game = self.game
+        if self.kind == "gin":
+            if action == "teacher_turn":
+                self._teacher_turn(teacher)
+            return
         if action == "teacher_opens":
             tutorial.teacher_opens(game, teacher)
             self.changed()
@@ -450,6 +457,32 @@ class Room:
                     self.changed()
 
             asyncio.get_running_loop().call_later(tutorial.BORROW_SECONDS, give_back)
+
+    def _teacher_turn(self, teacher: str) -> None:
+        """The Gin Teacher's scripted turn, a step at a time so it can be followed."""
+        game = self.game
+        steps = [] if self.teacher_moving else gin_tutorial.teacher_turn(game, teacher)
+        if not steps:
+            return
+        self.teacher_moving = True
+        loop = asyncio.get_running_loop()
+
+        def play(i: int) -> None:
+            if self.game is not game or self.phase != "playing" or self.closed:
+                self.teacher_moving = False
+                return
+            try:
+                gin.act(self, teacher, steps[i]())
+            except GameError:
+                log.exception("tutorial teacher move failed")
+                self.teacher_moving = False
+                return
+            if i + 1 < len(steps):
+                loop.call_later(gin_tutorial.STEP_SECONDS, play, i + 1)
+            else:
+                self.teacher_moving = False
+
+        loop.call_later(gin_tutorial.STEP_SECONDS, play, 0)
 
     def _teacher(self) -> str | None:
         return next((s.id for s in self.seats.values() if s.id != self.host), None)
@@ -500,12 +533,17 @@ class RoomManager:
             hook(room)
         return room, room.add_seat(name, None)
 
-    def create_tutorial(self, name: str, teacher: str) -> tuple[Room, Seat]:
-        """A private tutorial game, already started; see ``tutorial``."""
-        room, seat = self.create(name)
+    def create_tutorial(
+        self, name: str, teacher: str, kind: p.GameKind = "wild"
+    ) -> tuple[Room, Seat]:
+        """A private tutorial game, already started; see ``tutorial`` and ``gin_tutorial``."""
+        room, seat = self.create(name, kind)
         room.tutorial = True
         teacher_seat = room.add_seat(teacher, None, cpu="easy")
-        room.game = tutorial.new_game(seat.id, teacher_seat.id)
+        if kind == "gin":
+            room.game = gin_tutorial.new_game(seat.id, teacher_seat.id)
+        else:
+            room.game = tutorial.new_game(seat.id, teacher_seat.id)
         room.phase = "playing"
         room.changed()
         return room, seat

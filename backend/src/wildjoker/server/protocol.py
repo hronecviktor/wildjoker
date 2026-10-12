@@ -57,6 +57,7 @@ class Tutorial(Message):
     type: Literal["tutorial"]
     name: Name
     teacher: Name
+    game: GameKind = "wild"
 
 
 class Resume(Message):
@@ -169,7 +170,7 @@ class VoteDraw(Message):
 
 class TutorialAction(Message):
     type: Literal["tutorial_action"]
-    action: Literal["teacher_opens", "teacher_borrows"]
+    action: Literal["teacher_opens", "teacher_borrows", "teacher_turn"]
 
 
 class FastForward(Message):

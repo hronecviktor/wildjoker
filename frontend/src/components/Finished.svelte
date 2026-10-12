@@ -20,7 +20,7 @@
   async function practiseAgain() {
     const me = room.players.find((p) => p.id === room.you)?.name ?? "";
     await leaveRoom();
-    await startTutorial(me);
+    await startTutorial(me, room.kind);
   }
 </script>
 
@@ -49,7 +49,7 @@
   {#if room.tutorial}
     <section class="outro" data-testid="tutorial-outro">
       <h2>{t("tutorial.outro_title")}</h2>
-      <p>{t("tutorial.outro")}</p>
+      <p>{t(room.kind === "gin" ? "gin_tutorial.outro" : "tutorial.outro")}</p>
     </section>
   {/if}
 

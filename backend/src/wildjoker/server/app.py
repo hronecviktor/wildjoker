@@ -90,8 +90,8 @@ async def game_socket(ws: WebSocket) -> None:
                     match msg:
                         case p.Create(name=name, game=kind):
                             room, seat = manager.create(name, kind)
-                        case p.Tutorial(name=name, teacher=teacher):
-                            room, seat = manager.create_tutorial(name, teacher)
+                        case p.Tutorial(name=name, teacher=teacher, game=kind):
+                            room, seat = manager.create_tutorial(name, teacher, kind)
                         case p.Join(code=code, name=name):
                             room, seat = manager.join(code, name)
                         case p.Resume(code=code, token=token):

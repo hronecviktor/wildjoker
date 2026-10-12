@@ -1,9 +1,12 @@
-"""Gin: picking the game on the start page, and turns between two phones."""
+"""Gin: picking the game on the start page, the tutorial, and turns between
+two phones."""
 
 import re
 
+from conftest import SCREENSHOTS
 from helpers import hand, join_by_link, tap_card
 from playwright.sync_api import Page, expect
+from test_tutorial import MAX_TAPS, tap_highlight
 
 
 def create_gin_room(page: Page, name: str) -> str:
@@ -32,11 +35,6 @@ def test_the_start_page_switches_between_the_games(phone):
     page.get_by_test_id("game-gin").click()
     expect(page.get_by_role("heading", level=1)).to_contain_text("Gin")
     expect(page.get_by_test_id("game-gin")).to_have_attribute("aria-checked", "true")
-    # "How to play" shows the Gin rules instead of the Wild Joker tutorial.
-    page.get_by_test_id("tutorial-start").click()
-    expect(page.get_by_test_id("gin-rules")).to_be_visible()
-    page.get_by_role("button", name="Close").click()
-    expect(page.get_by_test_id("gin-rules")).to_be_hidden()
     # The choice is remembered.
     page.reload()
     expect(page.get_by_test_id("game-gin")).to_have_attribute("aria-checked", "true")
@@ -85,3 +83,56 @@ def test_two_players_take_turns(make_context, screenshot):
     # Scores show in the player strip; the round number in the header.
     expect(host.get_by_test_id("score")).to_have_count(2)
     expect(host.get_by_test_id("round")).to_contain_text("Round 1")
+
+
+def test_gin_tutorial_by_following_the_highlights(phone):
+    page = phone.new_page()
+    page.goto("/")
+    page.get_by_test_id("game-gin").tap()
+    page.get_by_test_id("tutorial-start").tap()
+    coach = page.get_by_test_id("tutorial")
+    expect(coach).to_be_visible()
+    # Off-script moves are refused: the top discard can't be taken at the start.
+    page.locator("[data-testid=discard] [data-card]").last.tap()
+    expect(page.locator(".toast").last).to_contain_text("Follow the step")
+
+    steps = []
+    for _ in range(MAX_TAPS):
+        if page.get_by_test_id("tutorial-outro").is_visible():
+            break
+        step = coach.get_attribute("data-step")
+        if not steps or steps[-1] != step:
+            steps.append(step)
+            page.screenshot(path=str(SCREENSHOTS / f"gin-tutorial-{len(steps):02d}-{step}.png"))
+        next_button = page.get_by_test_id("tutorial-next")
+        if next_button.is_visible():
+            expect(next_button).to_be_enabled()
+            next_button.tap()
+        else:
+            assert tap_highlight(page), f"step {step}: nothing to tap"
+        page.wait_for_timeout(400)  # let the move land and the rings move
+    else:
+        page.screenshot(path=str(SCREENSHOTS / "gin-tutorial-stuck.png"))
+        raise AssertionError(f"tutorial didn't finish; steps seen: {steps}")
+
+    assert steps == [
+        "welcome",
+        "screen",
+        "draw",
+        "meld",
+        "discard",
+        "teacher",
+        "dig",
+        "own",
+        "other",
+        "discard_again",
+        "teacher_again",
+        "draw_last",
+        "joker",
+        "gin",
+    ]
+    expect(page.get_by_test_id("tutorial-outro")).to_contain_text("80 points")
+    expect(page.get_by_test_id("final-score").first).to_have_text("80 points")
+    page.screenshot(path=str(SCREENSHOTS / "gin-tutorial-99-outro.png"))
+    page.get_by_test_id("tutorial-play").tap()
+    expect(page.get_by_test_id("tutorial-start")).to_be_visible()
