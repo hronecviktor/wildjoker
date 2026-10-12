@@ -330,12 +330,18 @@
         >{game.sort === "suit" ? "♠♥" : "A23"}</button
       >
     </div>
-    {#if room.tutorial}
-      <!-- the tutorial's coach panel explains instead -->
-    {:else if !game.opened}
-      <p class="tip">{hasSelection && !game.canOpen ? t("game.open_hint") : t("game.open_tip")}</p>
-    {:else if !game.drafting && !hasSelection && view.table.length > 0}
-      <p class="tip">{t("game.move_tip")}</p>
+    {#if !room.tutorial}
+      <!-- (The tutorial's coach panel explains instead.) The tip keeps its
+           two-line slot even when empty: if it came and went with the
+           selection, the table's height would change and its piles jump
+           to another card size. -->
+      <p class="tip" data-testid="tip">
+        {#if !game.opened}
+          {hasSelection && !game.canOpen ? t("game.open_hint") : t("game.open_tip")}
+        {:else if !game.drafting && !hasSelection && view.table.length > 0}
+          {t("game.move_tip")}
+        {/if}
+      </p>
     {/if}
     <Hand
       cards={game.hand}
@@ -561,9 +567,18 @@
     font-weight: 800;
   }
   .tip {
+    --lines: 2;
+    flex: none;
+    height: calc(var(--lines) * 1.35em);
     margin: 4px 12px 0;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: var(--lines);
+    line-clamp: var(--lines);
     color: var(--muted);
     font-size: 13px;
+    line-height: 1.35;
   }
   .ff-bar {
     display: flex;
