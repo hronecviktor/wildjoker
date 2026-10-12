@@ -137,6 +137,27 @@ def test_health_and_invite_page(http):
     assert http.get("/healthz").text == "ok"
     assert "Wild Joker" in http.get("/j/ABCD").text
     assert "Wild Joker" in http.get("/").text
+    assert http.get("/").headers["cache-control"] == "no-cache"
+
+
+def test_app_install_files(tmp_path):
+    """The files that make the site installable as an app (PWA)."""
+    (tmp_path / "index.html").write_text("<!doctype html>")
+    (tmp_path / "manifest.webmanifest").write_text('{"name": "Wild Joker"}')
+    (tmp_path / "sw.js").write_text("// worker")
+    (tmp_path / "offline.html").write_text("<!doctype html>offline")
+    (tmp_path / "icons").mkdir()
+    (tmp_path / "icons" / "icon-192.png").write_bytes(b"png")
+    with TestClient(create_app(Settings(), static_dir=tmp_path, process_pool=False)) as client:
+        manifest = client.get("/manifest.webmanifest")
+        assert manifest.json() == {"name": "Wild Joker"}
+        assert manifest.headers["content-type"] == "application/manifest+json"
+        worker = client.get("/sw.js")
+        assert worker.headers["content-type"].startswith("text/javascript")
+        # Browsers check for a new worker on every launch only if it isn't cached.
+        assert worker.headers["cache-control"] == "no-cache"
+        assert "offline" in client.get("/offline.html").text
+        assert client.get("/icons/icon-192.png").content == b"png"
 
 
 # -- lobby ---------------------------------------------------------------------

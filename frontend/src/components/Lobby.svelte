@@ -6,11 +6,14 @@
   import { CPU_LEVELS, type CpuLevel, type StateMessage } from "../lib/protocol";
   import { act, conn, leaveRoom, voice } from "../lib/session.svelte";
   import { toast } from "../lib/toasts.svelte";
+  import { keepAwake } from "../lib/wakelock";
   import LangPicker from "./LangPicker.svelte";
   import VoiceControls from "./VoiceControls.svelte";
 
   let { room }: { room: StateMessage } = $props();
   const speaking = voice.speaking;
+  // The screen stays on while waiting for players (and talking).
+  $effect(() => keepAwake());
 
   const isHost = $derived(room.host === room.you);
   const link = $derived(`${location.origin}/j/${room.code}`);

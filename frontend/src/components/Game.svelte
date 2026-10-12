@@ -6,6 +6,7 @@
   import { GameController } from "../lib/game.svelte";
   import * as motion from "../lib/motion";
   import { setSound, soundOn } from "../lib/sounds";
+  import { keepAwake } from "../lib/wakelock";
   import { focusGroup, navigate } from "../lib/keynav";
   import { act, conn, leaveRoom, toggleMute } from "../lib/session.svelte";
   import { toast } from "../lib/toasts.svelte";
@@ -33,6 +34,9 @@
     void game.sort;
     untrack(() => motion.capture());
   });
+
+  // The screen stays on while the game is open.
+  $effect(() => keepAwake());
 
   let help = $state(false);
   let menu = $state(false);

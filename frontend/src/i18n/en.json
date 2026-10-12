@@ -195,6 +195,11 @@
   "event.stalemate": "Nobody can play any more cards: the game ends in a draw.",
   "event.kicked": "The host removed you from the game.",
 
+  "install.button": "Install the app",
+  "install.ios_title": "Add Wild Joker to your home screen",
+  "install.ios_share": "In Safari, tap the Share button",
+  "install.ios_add": "Scroll down and tap “Add to Home Screen”, then “Add”.",
+  "install.ios_done": "Open Wild Joker from its icon on your home screen.",
   "start.tutorial": "How to play",
   "tutorial.you": "You",
   "tutorial.teacher_name": "Teacher",

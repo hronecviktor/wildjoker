@@ -162,7 +162,19 @@ def create_app(
         page = static_dir / "index.html"
         if not page.exists():
             return PlainTextResponse("frontend not built", status_code=404)
-        return FileResponse(page)
+        # Checked on every load, so a new release shows up at once.
+        return FileResponse(page, headers={"Cache-Control": "no-cache"})
+
+    def root_file(name: str, media_type: str | None = None):
+        """A file from the top of the build, always checked for a newer version."""
+
+        async def serve(request) -> Response:
+            path = static_dir / name
+            if not path.exists():
+                return PlainTextResponse("not found", status_code=404)
+            return FileResponse(path, media_type=media_type, headers={"Cache-Control": "no-cache"})
+
+        return serve
 
     routes = [
         Route("/healthz", health),
@@ -170,9 +182,19 @@ def create_app(
         WebSocketRoute("/ws", game_socket),
         Route("/", index),
         Route("/j/{code}", index),  # invite links open the app
+        # Installing as an app (PWA): the manifest, the service worker, and
+        # the page it shows offline.
+        Route(
+            "/manifest.webmanifest",
+            root_file("manifest.webmanifest", "application/manifest+json"),
+        ),
+        Route("/sw.js", root_file("sw.js", "text/javascript")),
+        Route("/offline.html", root_file("offline.html")),
     ]
     if (static_dir / "assets").is_dir():
         routes.append(Mount("/assets", StaticFiles(directory=static_dir / "assets")))
+    if (static_dir / "icons").is_dir():
+        routes.append(Mount("/icons", StaticFiles(directory=static_dir / "icons")))
 
     @contextlib.asynccontextmanager
     async def lifespan(app: Starlette):

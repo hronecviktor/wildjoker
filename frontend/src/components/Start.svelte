@@ -5,6 +5,8 @@
   import { ServerError } from "../lib/connection.svelte";
   import { conn, startTutorial } from "../lib/session.svelte";
   import { load, save } from "../lib/storage";
+  import { canInstall, promptInstall } from "../lib/install.svelte";
+  import InstallHelp from "./InstallHelp.svelte";
   import LangPicker from "./LangPicker.svelte";
 
   let { invite = null }: { invite?: string | null } = $props();
@@ -13,6 +15,11 @@
   let code = $state("");
   let busy = $state(false);
   let error = $state("");
+  let installHelp = $state(false);
+
+  async function installApp() {
+    if (!(await promptInstall())) installHelp = true;
+  }
 
   const nameOk = $derived(name.trim().length >= 1 && name.trim().length <= 20);
   const codeOk = $derived(/^[A-Za-z]{4}$/.test(code.trim()));
@@ -124,8 +131,15 @@
       🎓 {t("start.tutorial")}
     </button>
   {/if}
+  {#if canInstall()}
+    <button type="button" class="btn big install" onclick={installApp} data-testid="install">
+      📲 {t("install.button")}
+    </button>
+  {/if}
   {#if error}<p class="error" role="alert">{error}</p>{/if}
 </main>
+
+{#if installHelp}<InstallHelp onclose={() => (installHelp = false)} />{/if}
 
 <style>
   .start {

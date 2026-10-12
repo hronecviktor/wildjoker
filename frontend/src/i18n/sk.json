@@ -195,6 +195,11 @@
   "event.stalemate": "Nikto už nemôže vyložiť žiadnu kartu: hra končí remízou.",
   "event.kicked": "Hostiteľ ťa z hry odobral.",
 
+  "install.button": "Nainštalovať aplikáciu",
+  "install.ios_title": "Pridajte si Wild Joker na plochu",
+  "install.ios_share": "V Safari ťuknite na tlačidlo Zdieľať",
+  "install.ios_add": "Posuňte nižšie a ťuknite na „Pridať na plochu“, potom na „Pridať“.",
+  "install.ios_done": "Wild Joker potom otvárajte cez jeho ikonu na ploche.",
   "start.tutorial": "Ako sa hrá",
   "tutorial.you": "Ty",
   "tutorial.teacher_name": "Učiteľ",
